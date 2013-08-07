@@ -30,7 +30,7 @@
 (defun read-bulk (stream &optional top-level?)
   (let ((marker (read-byte stream (not top-level?) :end)))
     (case marker
-      (0 nil)
+      (0 :nil)
       (1 (%read-form-payload stream))
       (2 (if top-level? (error 'parsing-error) :end))
       (3 (%read-array-payload stream))
