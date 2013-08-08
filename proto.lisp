@@ -62,3 +62,7 @@
 
 (defun read-whole (stream)
   (%read-form-payload stream t))
+
+(defun read-file (pathspec)
+  (with-open-file (bulk-stream pathspec :element-type '(unsigned-byte 8))
+    (read-whole bulk-stream)))
