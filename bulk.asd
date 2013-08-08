@@ -10,5 +10,5 @@
   :licence "AGPL"
   :depends-on ("alexandria" "thierry-macros")
   :components ((:file "package")
-	       (:file "proto"))
+	       (:file "read"))
   :serial t)
