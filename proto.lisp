@@ -33,10 +33,11 @@
   (let* ((ns (if (eql #xFF marker)
 		 (let@ rec ((ns #xFF00)
 			    (next (read-byte stream)))
-		   (let ((ns (* #xFF (+ ns next))))
+		   (let ((ns (ash (+ ns next) 8)))
 		     (if (eql #xFF next)
 			 (rec ns (read-byte stream))
-			 ns)))))
+			 ns)))
+		 marker))
 	 (name (read-byte stream)))
     (make-ref :ns ns :name name)))
 
