@@ -19,6 +19,14 @@
 (defgeneric write-bulk (stream bulk)
   (:documentation "Serialize a BULK expression to a binary stream."))
 
+
+(define-condition serialization-error (error) ())
+(define-condition unimplemented-serialization (serialization-error) ())
+
+(defmethod write-bulk (stream bulk)
+  (error 'unimplemented-serialization))
+
+
 (defmethod write-bulk (stream (bulk (eql :nil)))
   (declare (ignore bulk))
   (write-byte 0 stream))
@@ -29,6 +37,39 @@
     (write-bulk stream expr))
   (write-byte 2 stream))
 
+
+(defun %write-unsigned-payload (stream value bytes)
+  (let@ rec ((count bytes))
+    (unless (zerop count)
+      (write-byte (ldb (byte 8 (* 8 (1- count))) value) stream)
+      (rec (1- count)))))
+
+(defmethod write-bulk (stream (bulk integer))
+  (typecase bulk
+    ((integer 0 #xFF)
+     (progn (write-byte 4 stream)
+	    (%write-unsigned-payload stream bulk 1)))
+    ((integer 0 #xFFFF)
+     (progn (write-byte 5 stream)
+	    (%write-unsigned-payload stream bulk 2)))
+    ((integer 0 #xFFFFFFFF)
+     (progn (write-byte 6 stream)
+	    (%write-unsigned-payload stream bulk 4)))
+    ((integer 0 #xFFFFFFFFFFFFFFFF)
+     (progn (write-byte 7 stream)
+	    (%write-unsigned-payload stream bulk 8)))
+    ((integer 0 #xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+     (progn (write-byte 8 stream)
+	    (%write-unsigned-payload stream bulk 16)))
+    (t (error 'unimplemented-serialization))))
+
+
+(defmethod write-bulk (stream (bulk ref))
+  (with-slots (ns name) bulk
+    (if (<= ns #xFF)
+	(write-byte ns stream)
+	(error 'unimplemented-serialization))
+    (write-byte name stream)))
 
 #| Function to write BULK data to a file |#
 
