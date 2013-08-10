@@ -15,4 +15,4 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (defpackage :nothos.net/2013.08.bulk
-  (:use :cl :thierry-macros))
+  (:use :cl :hu.dwim.stefil :thierry-macros))

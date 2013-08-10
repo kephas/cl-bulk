@@ -8,8 +8,9 @@
   :version "0.1.0"
   :author "Pierre Thierry <pierre@nothos.net>"
   :licence "AGPL"
-  :depends-on ("thierry-macros")
+  :depends-on ("hu.dwim.stefil" "thierry-macros")
   :components ((:file "package")
 	       (:file "read")
-	       (:file "write"))
+	       (:file "write")
+	       (:file "test"))
   :serial t)
