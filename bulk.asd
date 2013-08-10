@@ -8,7 +8,8 @@
   :version "0.1.0"
   :author "Pierre Thierry <pierre@nothos.net>"
   :licence "AGPL"
-  :depends-on ("alexandria" "thierry-macros")
+  :depends-on ("thierry-macros")
   :components ((:file "package")
-	       (:file "read"))
+	       (:file "read")
+	       (:file "write"))
   :serial t)
