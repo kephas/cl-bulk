@@ -44,6 +44,10 @@
       (write-byte (ldb (byte 8 (* 8 (1- count))) value) stream)
       (rec (1- count)))))
 
+(defun make-2c-notation (value bytes)
+  (let ((msb<<1 (ash 1 (* 8 bytes))))
+    (mod (+ msb<<1 value) msb<<1)))
+
 (defmethod write-bulk (stream (bulk integer))
   (typecase bulk
     ((integer 0 #xFF)
@@ -61,6 +65,21 @@
     ((integer 0 #xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
      (progn (write-byte 8 stream)
 	    (%write-unsigned-payload stream bulk 16)))
+    ((integer #x-80 0)
+     (progn (write-byte 9 stream)
+	    (write-bulk stream (make-2c-notation bulk 1))))
+    ((integer #x-8000 0)
+     (progn (write-byte 9 stream)
+	    (write-bulk stream (make-2c-notation bulk 2))))
+    ((integer #x-80000000 0)
+     (progn (write-byte 9 stream)
+	    (write-bulk stream (make-2c-notation bulk 4))))
+    ((integer #x-8000000000000000 0)
+     (progn (write-byte 9 stream)
+	    (write-bulk stream (make-2c-notation bulk 8))))
+    ((integer #x-80000000000000000000000000000000 0)
+     (progn (write-byte 9 stream)
+	    (write-bulk stream (make-2c-notation bulk 16))))
     (t (error 'unimplemented-serialization))))
 
 

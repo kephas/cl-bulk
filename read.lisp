@@ -38,8 +38,14 @@
 	  (setf (ldb (byte 8 (* 8 (1- count))) value) (read-byte stream))
 	  (rec (1- count) value)))))
 
+(defun parse-2c-notation (value bytes)
+  (let ((msb (ash 1 (1- (* 8 bytes)))))
+    (- (boole boole-and value (1- msb))
+       (boole boole-and value msb))))
+
 (defun %read-signed-payload (stream)
-  (1+ (boole boole-c1 (read-bulk stream) 0)))
+  (multiple-value-bind (value bytes) (read-bulk stream)
+    (parse-2c-notation value bytes)))
 
 
 (defstruct ref
@@ -66,11 +72,11 @@
       (1 (%read-form-payload stream))
       (2 (if top-level? (error 'parsing-error) :end))
       (3 (%read-array-payload stream))
-      (4 (%read-unsigned-payload stream 1))
-      (5 (%read-unsigned-payload stream 2))
-      (6 (%read-unsigned-payload stream 4))
-      (7 (%read-unsigned-payload stream 8))
-      (8 (%read-unsigned-payload stream 16))
+      (4 (values (%read-unsigned-payload stream 1) 1))
+      (5 (values (%read-unsigned-payload stream 2) 2))
+      (6 (values (%read-unsigned-payload stream 4) 4))
+      (7 (values (%read-unsigned-payload stream 8) 8))
+      (8 (values (%read-unsigned-payload stream 16) 16))
       (9 (%read-signed-payload stream))
       ((10 11 12 13 14 15) (error 'parsing-error))
       (:end :end)
