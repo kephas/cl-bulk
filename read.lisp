@@ -16,12 +16,12 @@
 
 (in-package :nothos.net/2013.08.bulk)
 
-(defun %read-form-payload (stream &optional top-level?)
+(defun %read-form-payload (stream top-level?)
   (let@ rec ((expressions)
-	     (next (read-bulk stream top-level?)))
+	     (next (%read-bulk stream top-level?)))
     (if (eq next :end)
 	(reverse expressions)
-	(rec (cons next expressions) (read-bulk stream top-level?)))))
+	(rec (cons next expressions) (%read-bulk stream top-level?)))))
 
 (defun %read-array-payload (stream)
   (let* ((size (read-bulk stream))
@@ -69,11 +69,11 @@ notation"
 
 (define-condition parsing-error (error) ())
 
-(defun read-bulk (stream &optional top-level?)
+(defun %read-bulk (stream top-level?)
   (let ((marker (read-byte stream (not top-level?) :end)))
     (case marker
       (0 :nil)
-      (1 (%read-form-payload stream))
+      (1 (%read-form-payload stream nil))
       (2 (if top-level? (error 'parsing-error) :end))
       (3 (%read-array-payload stream))
       (4 (values (read-unsigned-word stream 1) 1))
@@ -85,6 +85,9 @@ notation"
       ((10 11 12 13 14 15) (error 'parsing-error))
       (:end :end)
       (t (%read-ref-payload stream marker)))))
+
+(defun read-bulk (stream)
+  (%read-bulk stream nil))
 
 (defun read-whole (stream)
   (%read-form-payload stream t))
