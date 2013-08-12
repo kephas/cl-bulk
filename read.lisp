@@ -30,6 +30,8 @@
     array))
 
 (defun read-unsigned-word (stream bytes)
+  "Read the next BYTES bytes in STREAM as a big-endian unsigned
+integer"
   (let@ rec ((count bytes)
 	     (value 0))
     (if (zerop count)
@@ -39,6 +41,8 @@
 	  (rec (1- count) value)))))
 
 (defun parse-2c-notation (value bytes)
+  "Parse the integer VALUE as a word of size BYTES in two's complement
+notation"
   (let ((msb (ash 1 (1- (* 8 bytes)))))
     (- (boole boole-and value (1- msb))
        (boole boole-and value msb))))
