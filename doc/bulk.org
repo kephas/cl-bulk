@@ -1,0 +1,67 @@
+#+TITLE: BULK API
+#+OPTIONS: num:nil
+
+* Abstract
+  This library provides an API to read and write BULK binary data. It
+  doesn't yet provides BULK evaluation.
+
+  See http://tools.ietf.org/html/draft-thierry-bulk-02 for the BULK
+  format specification.
+
+* Reading
+  Functions reading BULK data may raise a =parsing-error= error.
+
+** =read-bulk (stream)=
+   This function reads one expression from the BULK stream and
+   returns it.
+
+** =read-whole (stream)=
+   This function reads all expressions from the BULK stream and
+   returns them in a list.
+
+** =read-file (pathspec)=
+   This function opens the designated BULK file, reads all expressions
+   from it and returns them in a list.
+
+** =read-unsigned-word (stream bytes)=
+   This functions reads a =bytes=-length word from =stream= and
+   returns the resulting unsigned integer.
+
+** =parse-2c-notation (value bytes)=
+   This function parses the integer =value= as a word of size =bytes=
+   in two's complement notation and returns the resulting signed
+   integer.
+
+** =ref=
+   This structure is returned when a reference is parsed from a BULK
+   stream.
+
+* Writing
+** =write-bulk (stream bulk)=
+   This generic function writes to =stream= the serialization of the
+   expression =bulk=.
+
+   Methods for:
+   - (T REF)
+     - namespace markers greater than 255 are not implemented yet
+   - (T INTEGER)
+     - unbounded integers are not implemented yet
+   - (T LIST)
+   - T (EQL NIL)
+
+   It may raise an =unimplemented-serialization= error.
+
+** =create-bulk-file (pathspec bulk-list)=
+   This functions creates a new =pathspec= file (or overwrites an
+   existing one) and writes to it the serialization of each
+   expression in the list =bulk-list=.
+
+** =append-to-bulk-file (pathspec bulk-list)=
+   This functions opens the =pathspec= file (or creates it if it
+   doesn't exists) and appends to it the serialization of each
+   expression in the list =bulk-list=.
+
+** =make-2c-notation (value bytes)=
+   This functions returns the unsigned integer whose =bytes=-length
+   binary representation is the two's complement notation of signed
+   integer =value=.
