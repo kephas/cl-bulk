@@ -43,7 +43,6 @@
 
    Methods for:
    - (T REF)
-     - namespace markers greater than 255 are not implemented yet
    - (T INTEGER)
      - unbounded integers are not implemented yet
    - (T LIST)

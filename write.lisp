@@ -87,7 +87,13 @@
   (with-slots (ns name) bulk
     (if (<= ns #xFF)
 	(write-byte ns stream)
-	(error 'unimplemented-serialization))
+	(write-sequence (let@ rec ((value ns)
+				   (bytes))
+			  (if (zerop value)
+			      bytes
+			      (rec (ash value -8)
+				   (cons (ldb (byte 8 0) value) bytes))))
+			stream))
     (write-byte name stream)))
 
 #| Function to write BULK data to a file |#
