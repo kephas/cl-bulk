@@ -51,10 +51,6 @@ notation"
   (multiple-value-bind (value bytes) (read-bulk stream)
     (parse-2c-notation value bytes)))
 
-
-(defstruct ref
-  ns name)
-
 (defun %read-ref-payload (stream marker)
   (let* ((ns (if (eql #xFF marker)
 		 (let@ rec ((ns #xFF00)
@@ -65,7 +61,7 @@ notation"
 			 ns)))
 		 marker))
 	 (name (read-byte stream)))
-    (make-ref :ns ns :name name)))
+    (ref ns name)))
 
 (define-condition parsing-error (error) ())
 

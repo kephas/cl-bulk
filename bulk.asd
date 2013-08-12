@@ -10,6 +10,7 @@
   :licence "AGPL"
   :depends-on ("hu.dwim.stefil" "scheme")
   :components ((:file "package")
+	       (:file "reference")
 	       (:file "read")
 	       (:file "write")
 	       (:file "test"))

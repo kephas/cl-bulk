@@ -25,6 +25,10 @@
 #x77 #x6F #x72 #x6C #x64 #x21) #x2A #x100 #x1000000 #x123456789ABCDEF
 #x-80)))
 (defparameter *nesting* '(:nil nil (nil nil)))
+(defparameter *references* (list (ref #x10 #x1)
+				 (ref #x10 #x2)
+				 (ref #xFE #xFF)
+				 (ref #xFFFFBC #x80)))
 
 (defsuite* all)
 
@@ -50,3 +54,6 @@
 
 (deftest read-nesting ()
   (is (equalp *nesting* (rest (read-file (asdf:system-relative-pathname "bulk" "tests/nesting.bulk"))))))
+
+(deftest read-references ()
+  (is (equalp *references* (rest (read-file (asdf:system-relative-pathname "bulk" "tests/references.bulk"))))))
