@@ -5,10 +5,10 @@
 
 (defsystem "bulk"
   :description "BULK library"
-  :version "0.1.0"
+  :version "0.1"
   :author "Pierre Thierry <pierre@nothos.net>"
   :licence "AGPL"
-  :depends-on ("hu.dwim.stefil" "thierry-macros")
+  :depends-on ("hu.dwim.stefil" "scheme")
   :components ((:file "package")
 	       (:file "read")
 	       (:file "write")

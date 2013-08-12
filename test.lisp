@@ -14,31 +14,36 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
-(in-package :nothos.net/2013.08.bulk)
+(defpackage :nothos.net/2013.08.bulk-test
+  (:use :cl :hu.dwim.stefil :bulk)
+  (:export #:all #:maths #:parsing)
+  (:nicknames :bulk-test))
+
+(in-package :nothos.net/2013.08.bulk-test)
 
 (defparameter *primitives* '((:nil #(#x48 #x65 #x6C #x6C #x6F #x20
 #x77 #x6F #x72 #x6C #x64 #x21) #x2A #x100 #x1000000 #x123456789ABCDEF
 #x-80)))
 (defparameter *nesting* '(:nil nil (nil nil)))
 
-(defsuite* test-bulk)
+(defsuite* all)
 
-
-(defsuite* test-maths)
+(in-suite all)
+(defsuite* maths)
 
 (defparameter *specs-2c* '((-5 #xFB 1)(0 0 1)(0 0 4)(#x-80 #x80 1)(#x-7F #x81 1)(#x7F #x7F 1)(#x-7F #xFF81 2)))
 
-(deftest test-make-2c ()
+(deftest make-2c ()
   (dolist (specs *specs-2c*)
     (is (= (make-2c-notation (first specs) (third specs)) (second specs)))))
 
-(deftest test-parse-2c ()
+(deftest parse-2c ()
   (dolist (specs *specs-2c*)
     (is (= (parse-2c-notation (second specs) (third specs)) (first specs)))))
 
 
-(in-suite test-bulk)
-(defsuite* test-read)
+(in-suite all)
+(defsuite* parsing)
 
 (deftest read-primitives ()
   (is (equalp *primitives* (rest (read-file (asdf:system-relative-pathname "bulk" "tests/primitives.bulk"))))))

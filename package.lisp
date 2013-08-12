@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (defpackage :nothos.net/2013.08.bulk
-  (:use :cl :hu.dwim.stefil :thierry-macros)
+  (:use :cl :scheme)
   (:export #:read-unsigned-word #:ref
 	   #:read-bulk #:read-whole #:read-file
 	   #:parse-2c-notation #:make-2c-notation
