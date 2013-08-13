@@ -37,6 +37,11 @@
     (write-bulk stream expr))
   (write-byte 2 stream))
 
+(defmethod write-bulk (stream (bulk vector))
+  (write-byte 3 stream)
+  (write-bulk stream (length bulk))
+  (write-sequence bulk stream))
+
 
 (defun %write-unsigned-payload (stream value bytes)
   (let@ rec ((count bytes))
