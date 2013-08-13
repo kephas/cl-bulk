@@ -8,7 +8,7 @@
   :version "0.1"
   :author "Pierre Thierry <pierre@nothos.net>"
   :licence "AGPL"
-  :depends-on ("hu.dwim.stefil" "scheme")
+  :depends-on ("hu.dwim.stefil" "scheme" "flexi-streams")
   :components ((:file "package")
 	       (:file "reference")
 	       (:file "read")

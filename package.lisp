@@ -16,8 +16,9 @@
 
 (defpackage :nothos.net/2013.08.bulk
   (:use :cl :scheme)
-  (:export #:read-unsigned-word #:ref
+  (:export #:read-unsigned-word
+	   #:ref #:ns #:name
 	   #:read-bulk #:read-whole #:read-file
 	   #:parse-2c-notation #:make-2c-notation
-	   #:write-bulk #:create-bulk-file #:append-to-bulk-file)
+	   #:write-bulk #:write-whole #:create-bulk-file #:append-to-bulk-file)
   (:nicknames :bulk))

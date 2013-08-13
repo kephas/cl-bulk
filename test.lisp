@@ -15,20 +15,56 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (defpackage :nothos.net/2013.08.bulk-test
-  (:use :cl :hu.dwim.stefil :bulk)
-  (:export #:all #:maths #:parsing)
+  (:use :cl :hu.dwim.stefil :bulk :scheme :flexi-streams)
+  (:export #:all #:maths #:parsing #:writing)
   (:nicknames :bulk-test))
 
 (in-package :nothos.net/2013.08.bulk-test)
 
+
+(defparameter *primitives-bulk* #(1 0 3 4 12 72 101 108 108 111 32 119
+111 114 108 100 33 4 42 5 1 0 6 1 0 0 0 7 1 35 69 103 137 171 205 239
+9 4 128 2))
 (defparameter *primitives* '((:nil #(#x48 #x65 #x6C #x6C #x6F #x20
 #x77 #x6F #x72 #x6C #x64 #x21) #x2A #x100 #x1000000 #x123456789ABCDEF
 #x-80)))
+
+(defparameter *nesting-bulk* #(0 1 2 1 1 2 1 2 2))
 (defparameter *nesting* '(:nil nil (nil nil)))
+
+(defparameter *references-bulk* #(16 1 16 2 254 255 255 255 188 128))
 (defparameter *references* (list (ref #x10 #x1)
 				 (ref #x10 #x2)
 				 (ref #xFE #xFF)
 				 (ref #xFFFFBC #x80)))
+
+(defun read-bulk-seq (seq)
+  (with-input-from-sequence (in seq)
+    (read-whole in)))
+
+
+#| custom equality predicate |#
+
+(defgeneric egal? (x y))
+
+(defmethod egal? (x y)
+  (equalp x y))
+
+(defmethod egal? ((x (eql nil)) (y (eql nil)))
+  t)
+
+(defmethod egal? ((x list) (y list))
+  (and (egal? (first x) (first y))
+       (egal? (rest x) (rest y))))
+
+(defmethod egal? ((x ref) (y ref))
+  (and (egal? (slot-value x 'ns)
+	      (slot-value y 'ns))
+       (egal? (slot-value x 'name)
+	      (slot-value y 'name))))
+
+
+#| test suite |#
 
 (defsuite* all)
 
@@ -50,10 +86,25 @@
 (defsuite* parsing)
 
 (deftest read-primitives ()
-  (is (equalp *primitives* (rest (read-file (asdf:system-relative-pathname "bulk" "tests/primitives.bulk"))))))
+  (is (egal? *primitives* (read-bulk-seq *primitives-bulk*))))
 
 (deftest read-nesting ()
-  (is (equalp *nesting* (rest (read-file (asdf:system-relative-pathname "bulk" "tests/nesting.bulk"))))))
+  (is (egal? *nesting* (read-bulk-seq *nesting-bulk*))))
 
 (deftest read-references ()
-  (is (equalp *references* (rest (read-file (asdf:system-relative-pathname "bulk" "tests/references.bulk"))))))
+  (is (egal? *references* (read-bulk-seq *references-bulk*))))
+
+(in-suite all)
+(defsuite* writing)
+
+(deftest write-primitives ()
+  (is (egal? *primitives-bulk* (with-output-to-sequence (out)
+				 (write-whole out *primitives*)))))
+
+(deftest write-nesting ()
+  (is (egal? *nesting-bulk* (with-output-to-sequence (out)
+				 (write-whole out *nesting*)))))
+
+(deftest write-references ()
+  (is (egal? *references-bulk* (with-output-to-sequence (out)
+				 (write-whole out *references*)))))

@@ -103,11 +103,14 @@
 
 #| Function to write BULK data to a file |#
 
+(defun write-whole (stream bulk-list)
+  (dolist (expr bulk-list)
+    (write-bulk stream expr)))
+
 (defun %write-bulk-to-file (pathspec bulk-list mode)
   (with-open-file (out pathspec :element-type '(unsigned-byte 8)
 		       :direction :output :if-exists mode :if-does-not-exist :create)
-    (dolist (expr bulk-list)
-      (write-bulk out expr))))
+    (write-whole out bulk-list)))
 
 (defun create-bulk-file (pathspec bulk-list)
   "Create a new BULK stream in the file designated by {pathspec} with
