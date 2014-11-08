@@ -36,7 +36,7 @@
 (defparameter *references* (list (ref #x10 #x1)
 				 (ref #x10 #x2)
 				 (ref #xFE #xFF)
-				 (ref #xFFFFBC #x80)))
+				 (ref #x2BA #x80)))
 
 (defun read-bulk-seq (seq)
   (with-input-from-sequence (in seq)

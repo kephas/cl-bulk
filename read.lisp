@@ -53,11 +53,11 @@ notation"
 
 (defun %read-ref-payload (stream marker)
   (let* ((ns (if (eql #xFF marker)
-		 (let@ rec ((ns #xFF00)
+		 (let@ rec ((ns #xFF)
 			    (next (read-byte stream)))
 		   (let ((ns (+ ns next)))
 		     (if (eql #xFF next)
-			 (rec (ash ns 8) (read-byte stream))
+			 (rec ns (read-byte stream))
 			 ns)))
 		 marker))
 	 (name (read-byte stream)))
