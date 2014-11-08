@@ -83,11 +83,14 @@ notation"
       (t (%read-ref-payload stream marker)))))
 
 (defun read-bulk (stream)
+  "Read one BULK expression from a BULK stream"
   (%read-bulk stream nil))
 
 (defun read-whole (stream)
+  "Parse a whole BULK stream as a sequence of BULK expressions"
   (%read-form-payload stream t))
 
 (defun read-file (pathspec)
+  "Parse a whole BULK file"
   (with-open-file (bulk-stream pathspec :element-type '(unsigned-byte 8))
     (read-whole bulk-stream)))
