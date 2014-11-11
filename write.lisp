@@ -90,15 +90,9 @@
 
 (defmethod write-bulk (stream (bulk ref))
   (with-slots (ns name) bulk
-    (if (<= ns #xFF)
-	(write-byte ns stream)
-	(write-sequence (let@ rec ((value ns)
-				   (bytes))
-			  (if (zerop value)
-			      bytes
-			      (rec (ash value -8)
-				   (cons (ldb (byte 8 0) value) bytes))))
-			stream))
+    (multiple-value-bind (quot rem) (truncate ns 255)
+      (dotimes (n quot) (write-byte 255 stream))
+      (write-byte rem stream))
     (write-byte name stream)))
 
 #| Function to write BULK data to a file |#
