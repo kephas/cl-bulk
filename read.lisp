@@ -64,7 +64,8 @@ integer"
 	 (name (read-byte stream)))
     (ref ns name)))
 
-(define-condition parsing-error (error) ())
+(define-condition parsing-error (error)
+  ((pos :initarg :pos)))
 
 (defun %read-bulk (stream top-level?)
   (let ((marker (read-byte stream (not top-level?) :end)))
