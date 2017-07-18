@@ -24,7 +24,7 @@
 
 (defparameter *primitives-bulk* #(1 0 3 4 12 72 101 108 108 111 32 119
 111 114 108 100 33 4 42 5 1 0 6 1 0 0 0 7 1 35 69 103 137 171 205 239
-9 4 128 2))
+9 128 2))
 (defparameter *primitives* '((:nil #(#x48 #x65 #x6C #x6C #x6F #x20
 #x77 #x6F #x72 #x6C #x64 #x21) #x2A #x100 #x1000000 #x123456789ABCDEF
 #x-80)))
@@ -32,9 +32,9 @@
 (defparameter *nesting-bulk* #(0 1 2 1 1 2 1 2 2))
 (defparameter *nesting* '(:nil nil (nil nil)))
 
-(defparameter *references-bulk* #(16 1 16 2 254 255 255 255 188 128))
-(defparameter *references* (list (ref #x10 #x1)
-				 (ref #x10 #x2)
+(defparameter *references-bulk* #(32 1 32 2 254 255 255 255 188 128))
+(defparameter *references* (list (ref #x20 #x1)
+				 (ref #x20 #x2)
 				 (ref #xFE #xFF)
 				 (ref #x2BA #x80)))
 

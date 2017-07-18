@@ -47,9 +47,10 @@ notation"
     (- (boole boole-and value (1- msb))
        (boole boole-and value msb))))
 
-(defun %read-signed-payload (stream)
-  (multiple-value-bind (value bytes) (read-bulk stream)
-    (parse-2c-notation value bytes)))
+(defun read-signed-word (stream bytes)
+  "Read the next BYTES bytes in STREAM as a big-endian unsigned
+integer"
+  (parse-2c-notation (read-unsigned-word stream bytes) bytes)) 
 
 (defun %read-ref-payload (stream marker)
   (let* ((ns (if (eql #xFF marker)
@@ -72,13 +73,17 @@ notation"
       (1 (%read-form-payload stream nil))
       (2 (if top-level? (error 'parsing-error) :end))
       (3 (%read-array-payload stream))
-      (4 (values (read-unsigned-word stream 1) 1))
-      (5 (values (read-unsigned-word stream 2) 2))
-      (6 (values (read-unsigned-word stream 4) 4))
-      (7 (values (read-unsigned-word stream 8) 8))
-      (8 (values (read-unsigned-word stream 16) 16))
-      (9 (%read-signed-payload stream))
-      ((10 11 12 13 14 15) (error 'parsing-error))
+      (4 (read-unsigned-word stream 1))
+      (5 (read-unsigned-word stream 2))
+      (6 (read-unsigned-word stream 4))
+      (7 (read-unsigned-word stream 8))
+      (8 (read-unsigned-word stream 16))
+      (9 (read-signed-word stream 1))
+      (10 (read-signed-word stream 2))
+      (11 (read-signed-word stream 4))
+      (12 (read-signed-word stream 8))
+      (13 (read-signed-word stream 16))
+      ((14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31) (error 'parsing-error :pos (1- (file-position stream))))
       (:end :end)
       (t (%read-ref-payload stream marker)))))
 
