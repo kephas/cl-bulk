@@ -38,9 +38,14 @@
   (write-byte 2 stream))
 
 (defmethod write-bulk (stream (bulk vector))
-  (write-byte 3 stream)
-  (write-bulk stream (length bulk))
-  (write-sequence bulk stream))
+  (if (typep bulk '(vector (unsigned-byte 8)))
+	  (progn
+		(write-byte 3 stream)
+		(write-bulk stream (length bulk))
+		(write-sequence bulk stream))
+	  (typecase bulk
+		((vector character) (write-bulk stream (trivial-utf-8:string-to-utf-8-bytes bulk)))
+		(t (error 'unimplemented-serialization)))))
 
 
 (defun %write-unsigned-payload (stream value bytes)
