@@ -1,5 +1,5 @@
  #| BULK library
-    Copyright (C) 2013 Pierre Thierry <pierre@nothos.net>
+    Copyright (C) 2013--2018 Pierre Thierry <pierre@nothos.net>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published by
@@ -14,7 +14,13 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
-(in-package :nothos.net/2013.08.bulk)
+(uiop:define-package :bulk/write
+  (:use :cl :bulk/reference :scheme :trivial-utf-8)
+  (:export #:write-bulk #:write-whole
+		   #:create-bulk-file #:append-to-bulk-file
+		   #:unimplemented-serialization))
+
+(in-package :bulk/write)
 
 (defgeneric write-bulk (stream bulk)
   (:documentation "Serialize a BULK expression to a binary stream."))
