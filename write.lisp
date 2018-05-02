@@ -44,14 +44,15 @@
   (write-byte 2 stream))
 
 (defmethod write-bulk (stream (bulk vector))
-  (if (typep bulk '(vector (unsigned-byte 8)))
-	  (progn
-		(write-byte 3 stream)
-		(write-bulk stream (length bulk))
-		(write-sequence bulk stream))
-	  (typecase bulk
-		((vector character) (write-bulk stream (trivial-utf-8:string-to-utf-8-bytes bulk)))
-		(t (error 'unimplemented-serialization)))))
+  (typecase bulk
+	((vector (unsigned-byte 8)) (progn
+								  (write-byte 3 stream)
+								  (write-bulk stream (length bulk))
+								  (write-sequence bulk stream)))
+	((vector character) (write-bulk stream (trivial-utf-8:string-to-utf-8-bytes bulk)))
+	(t (let ((bytes (handler-case (coerce bulk '(vector (unsigned-byte 8)))
+					  (error () (error 'unimplemented-serialization)))))
+		 (write-bulk stream bytes)))))
 
 
 (defun %write-unsigned-payload (stream value bytes)
