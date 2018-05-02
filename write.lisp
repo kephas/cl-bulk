@@ -60,10 +60,6 @@
       (write-byte (ldb (byte 8 (* 8 (1- count))) value) stream)
       (rec (1- count)))))
 
-(defun make-2c-notation (value bytes)
-  (let ((msb<<1 (ash 1 (* 8 bytes))))
-    (mod (+ msb<<1 value) msb<<1)))
-
 (defmethod write-bulk (stream (bulk integer))
   (typecase bulk
     ((integer 0 #xFF)

@@ -15,10 +15,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (defpackage :bulk/test
-  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :scheme :flexi-streams)
+  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :bulk/words :scheme :flexi-streams)
   (:export #:all #:maths #:parsing #:writing))
 
-(in-package :nothos.net/2013.08.bulk-test)
+(in-package :bulk/test)
 
 
 (defparameter *primitives-bulk* #(1 0 3 4 12 72 101 108 108 111 32 119

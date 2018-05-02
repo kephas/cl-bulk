@@ -46,18 +46,6 @@ integer"
 	  (setf (ldb (byte 8 (* 8 (1- count))) value) (read-byte stream))
 	  (rec (1- count) value)))))
 
-(defun parse-2c-notation (value bytes)
-  "Parse the integer VALUE as a word of size BYTES in two's complement
-notation"
-  (let ((msb (ash 1 (1- (* 8 bytes)))))
-    (- (boole boole-and value (1- msb))
-       (boole boole-and value msb))))
-
-(defun read-signed-word (stream bytes)
-  "Read the next BYTES bytes in STREAM as a big-endian unsigned
-integer"
-  (parse-2c-notation (read-unsigned-word stream bytes) bytes)) 
-
 (defun %read-ref-payload (stream marker)
   (let* ((ns (if (eql #xFF marker)
 		 (let@ rec ((ns #xFF)
