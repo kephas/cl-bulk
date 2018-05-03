@@ -31,3 +31,20 @@ notation"
 (defun make-2c-notation (value bytes)
   (let ((msb<<1 (ash 1 (* 8 bytes))))
     (mod (+ msb<<1 value) msb<<1)))
+
+
+(defun bytes->word (bytes)
+  (reduce (lambda (word byte) (logior (ash word 8) byte)) bytes))
+
+(defun repeat (value count)
+  (let@ rec ((values nil) (count count))
+	(if (<= count 0) values (rec (cons value values) (1- count)))))
+
+(defun word->bytes (word &key (byte-size 8) length)
+  (let@ rec ((bytes nil)
+			 (word word))
+	(if (or (eql word 0) (eql word -1))
+		(if length
+			(last (append (repeat (if (zerop word) 0 255) (- length (length bytes))) bytes) length)
+			bytes)
+		(rec (cons (ldb (byte byte-size 0) word) bytes) (ash word (- byte-size))))))

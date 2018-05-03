@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/read
-  (:use :cl :bulk/reference :scheme)
+  (:use :cl :bulk/reference :bulk/words :scheme)
   (:export #:read-bulk #:read-whole #:read-file
 		   #:parsing-error)
   (:reexport :bulk/reference))
@@ -35,16 +35,12 @@
     (read-sequence array stream)
     array))
 
-(defun read-unsigned-word (stream bytes)
-  "Read the next BYTES bytes in STREAM as a big-endian unsigned
+(defun read-unsigned-word (stream size)
+  "Read the next SIZE bytes in STREAM as a big-endian unsigned
 integer"
-  (let@ rec ((count bytes)
-	     (value 0))
-    (if (zerop count)
-	value
-	(progn
-	  (setf (ldb (byte 8 (* 8 (1- count))) value) (read-byte stream))
-	  (rec (1- count) value)))))
+  (let ((bytes (make-array size)))
+	(read-sequence bytes stream)
+	(bytes->word bytes)))
 
 (defun %read-ref-payload (stream marker)
   (let* ((ns (if (eql #xFF marker)
