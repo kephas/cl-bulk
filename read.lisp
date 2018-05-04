@@ -82,11 +82,30 @@ integer"
   "Read one BULK expression from a BULK stream"
   (%read-bulk stream nil))
 
-(defun read-whole (stream)
-  "Parse a whole BULK stream as a sequence of BULK expressions"
-  (%read-form-payload stream t))
 
-(defun read-file (pathspec)
+(define-condition unsupported-bulk-version (error)
+  ((version :initarg :version)))
+
+(define-condition unknown-bulk-version (error) ())
+
+(defun read-whole (stream &key version)
+  "Parse a whole BULK stream as a sequence of BULK expressions"
+  (if version
+	  (if (equal '(1 0) version)
+		  (%read-form-payload stream t)
+		  (error 'unsupported-bulk-version :version version))
+	  (let ((first-form (read-bulk stream)))
+		(if (and (listp first-form)
+				 (typep (first first-form) 'ref)
+				 (with-slots (ns name) (first first-form)
+				   (and (eql #x20 ns) (eql 0 name))))
+			(let ((version (rest first-form)))
+			  (if (equal '(1 0) version)
+				  (cons first-form (%read-form-payload stream t))
+				  (error 'unsupported-bulk-version :version version)))
+			(error 'unknown-bulk-version)))))
+
+(defun read-file (pathspec &key version)
   "Parse a whole BULK file"
   (with-open-file (bulk-stream pathspec :element-type '(unsigned-byte 8))
-    (read-whole bulk-stream)))
+    (read-whole bulk-stream :version version)))

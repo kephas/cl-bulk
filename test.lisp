@@ -39,7 +39,7 @@
 
 (defun read-bulk-seq (seq)
   (with-input-from-sequence (in seq)
-    (read-whole in)))
+    (read-whole in :version '(1 0))))
 
 
 #| custom equality predicate |#
