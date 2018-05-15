@@ -17,6 +17,7 @@
 (uiop:define-package :bulk/write
   (:use :cl :bulk/reference :bulk/words :scheme :trivial-utf-8)
   (:export #:write-bulk #:write-whole
+		   #:arbitrary-bytes
 		   #:create-bulk-file #:append-to-bulk-file
 		   #:unimplemented-serialization))
 
@@ -31,6 +32,16 @@
 
 (defmethod write-bulk (stream bulk)
   (error 'unimplemented-serialization))
+
+
+(defclass arbitrary-bytes ()
+  ((bytes :initarg :bytes)))
+
+(defun arbitrary-bytes (bytes)
+  (make-instance 'arbitrary-bytes :bytes bytes))
+
+(defmethod write-bulk (stream (bulk arbitrary-bytes))
+  (write-sequence (slot-value bulk 'bytes) stream))
 
 
 (defmethod write-bulk (stream (bulk (eql :nil)))
