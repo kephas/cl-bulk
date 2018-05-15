@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/read
-  (:use :cl :bulk/reference :bulk/words :scheme)
+  (:use :cl :bulk/reference :bulk/words :scheme :alexandria)
   (:export #:read-bulk #:read-whole #:read-file
 		   #:parsing-error)
   (:reexport :bulk/reference))
@@ -74,7 +74,7 @@ integer"
       (11 (- (read-unsigned-word stream 4)))
       (12 (- (read-unsigned-word stream 8)))
       (13 (- (read-unsigned-word stream 16)))
-      ((14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31) (error 'parsing-error :pos (1- (file-position stream))))
+      ((14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31) (error 'parsing-error :pos (if-let (pos (file-position stream)) (1- pos))))
       (:end :end)
       (t (%read-ref-payload stream marker)))))
 
