@@ -1,5 +1,5 @@
  #| BULK library
-    Copyright (C) 2013 Pierre Thierry <pierre@nothos.net>
+    Copyright (C) 2013--2018 Pierre Thierry <pierre@nothos.net>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published by
@@ -14,7 +14,13 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
-(in-package :nothos.net/2013.08.bulk)
+(uiop:define-package :bulk/read
+  (:use :cl :bulk/reference :bulk/words :scheme :alexandria)
+  (:export #:read-bulk #:read-whole #:read-file
+		   #:parsing-error)
+  (:reexport :bulk/reference))
+
+(in-package :bulk/read)
 
 (defun %read-form-payload (stream top-level?)
   (let@ rec ((expressions)
@@ -29,28 +35,12 @@
     (read-sequence array stream)
     array))
 
-(defun read-unsigned-word (stream bytes)
-  "Read the next BYTES bytes in STREAM as a big-endian unsigned
+(defun read-unsigned-word (stream size)
+  "Read the next SIZE bytes in STREAM as a big-endian unsigned
 integer"
-  (let@ rec ((count bytes)
-	     (value 0))
-    (if (zerop count)
-	value
-	(progn
-	  (setf (ldb (byte 8 (* 8 (1- count))) value) (read-byte stream))
-	  (rec (1- count) value)))))
-
-(defun parse-2c-notation (value bytes)
-  "Parse the integer VALUE as a word of size BYTES in two's complement
-notation"
-  (let ((msb (ash 1 (1- (* 8 bytes)))))
-    (- (boole boole-and value (1- msb))
-       (boole boole-and value msb))))
-
-(defun read-signed-word (stream bytes)
-  "Read the next BYTES bytes in STREAM as a big-endian unsigned
-integer"
-  (parse-2c-notation (read-unsigned-word stream bytes) bytes)) 
+  (let ((bytes (make-array size)))
+	(read-sequence bytes stream)
+	(bytes->word bytes)))
 
 (defun %read-ref-payload (stream marker)
   (let* ((ns (if (eql #xFF marker)
@@ -84,7 +74,7 @@ integer"
       (11 (- (read-unsigned-word stream 4)))
       (12 (- (read-unsigned-word stream 8)))
       (13 (- (read-unsigned-word stream 16)))
-      ((14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31) (error 'parsing-error :pos (1- (file-position stream))))
+      ((14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31) (error 'parsing-error :pos (if-let (pos (file-position stream)) (1- pos))))
       (:end :end)
       (t (%read-ref-payload stream marker)))))
 
@@ -92,11 +82,30 @@ integer"
   "Read one BULK expression from a BULK stream"
   (%read-bulk stream nil))
 
-(defun read-whole (stream)
-  "Parse a whole BULK stream as a sequence of BULK expressions"
-  (%read-form-payload stream t))
 
-(defun read-file (pathspec)
+(define-condition unsupported-bulk-version (error)
+  ((version :initarg :version)))
+
+(define-condition unknown-bulk-version (error) ())
+
+(defun read-whole (stream &key version)
+  "Parse a whole BULK stream as a sequence of BULK expressions"
+  (if version
+	  (if (equal '(1 0) version)
+		  (%read-form-payload stream t)
+		  (error 'unsupported-bulk-version :version version))
+	  (let ((first-form (read-bulk stream)))
+		(if (and (listp first-form)
+				 (typep (first first-form) 'ref)
+				 (with-slots (ns name) (first first-form)
+				   (and (eql #x20 ns) (eql 0 name))))
+			(let ((version (rest first-form)))
+			  (if (equal '(1 0) version)
+				  (cons first-form (%read-form-payload stream t))
+				  (error 'unsupported-bulk-version :version version)))
+			(error 'unknown-bulk-version)))))
+
+(defun read-file (pathspec &key version)
   "Parse a whole BULK file"
   (with-open-file (bulk-stream pathspec :element-type '(unsigned-byte 8))
-    (read-whole bulk-stream)))
+    (read-whole bulk-stream :version version)))

@@ -1,5 +1,5 @@
  #| BULK library
-    Copyright (C) 2013 Pierre Thierry <pierre@nothos.net>
+    Copyright (C) 2013--2018 Pierre Thierry <pierre@nothos.net>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published by
@@ -14,7 +14,14 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
-(in-package :nothos.net/2013.08.bulk)
+(uiop:define-package :bulk/write
+  (:use :cl :bulk/reference :bulk/words :scheme :trivial-utf-8)
+  (:export #:write-bulk #:write-whole
+		   #:arbitrary-bytes
+		   #:create-bulk-file #:append-to-bulk-file
+		   #:unimplemented-serialization))
+
+(in-package :bulk/write)
 
 (defgeneric write-bulk (stream bulk)
   (:documentation "Serialize a BULK expression to a binary stream."))
@@ -25,6 +32,16 @@
 
 (defmethod write-bulk (stream bulk)
   (error 'unimplemented-serialization))
+
+
+(defclass arbitrary-bytes ()
+  ((bytes :initarg :bytes)))
+
+(defun arbitrary-bytes (bytes)
+  (make-instance 'arbitrary-bytes :bytes bytes))
+
+(defmethod write-bulk (stream (bulk arbitrary-bytes))
+  (write-sequence (slot-value bulk 'bytes) stream))
 
 
 (defmethod write-bulk (stream (bulk (eql :nil)))
@@ -38,58 +55,52 @@
   (write-byte 2 stream))
 
 (defmethod write-bulk (stream (bulk vector))
-  (if (typep bulk '(vector (unsigned-byte 8)))
-	  (progn
-		(write-byte 3 stream)
-		(write-bulk stream (length bulk))
-		(write-sequence bulk stream))
-	  (typecase bulk
-		((vector character) (write-bulk stream (trivial-utf-8:string-to-utf-8-bytes bulk)))
-		(t (error 'unimplemented-serialization)))))
+  (typecase bulk
+	((vector (unsigned-byte 8)) (progn
+								  (write-byte 3 stream)
+								  (write-bulk stream (length bulk))
+								  (write-sequence bulk stream)))
+	((vector character) (write-bulk stream (trivial-utf-8:string-to-utf-8-bytes bulk)))
+	(t (let ((bytes (handler-case (coerce bulk '(vector (unsigned-byte 8)))
+					  (error () (error 'unimplemented-serialization)))))
+		 (write-bulk stream bytes)))))
 
 
-(defun %write-unsigned-payload (stream value bytes)
-  (let@ rec ((count bytes))
-    (unless (zerop count)
-      (write-byte (ldb (byte 8 (* 8 (1- count))) value) stream)
-      (rec (1- count)))))
-
-(defun make-2c-notation (value bytes)
-  (let ((msb<<1 (ash 1 (* 8 bytes))))
-    (mod (+ msb<<1 value) msb<<1)))
+(defun %write-word (stream value size)
+  (write-sequence (word->bytes value :length size) stream))
 
 (defmethod write-bulk (stream (bulk integer))
   (typecase bulk
     ((integer 0 #xFF)
      (progn (write-byte 4 stream)
-	    (%write-unsigned-payload stream bulk 1)))
+			(%write-word stream bulk 1)))
     ((integer 0 #xFFFF)
      (progn (write-byte 5 stream)
-	    (%write-unsigned-payload stream bulk 2)))
+			(%write-word stream bulk 2)))
     ((integer 0 #xFFFFFFFF)
      (progn (write-byte 6 stream)
-	    (%write-unsigned-payload stream bulk 4)))
+			(%write-word stream bulk 4)))
     ((integer 0 #xFFFFFFFFFFFFFFFF)
      (progn (write-byte 7 stream)
-	    (%write-unsigned-payload stream bulk 8)))
+			(%write-word stream bulk 8)))
     ((integer 0 #xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
      (progn (write-byte 8 stream)
-	    (%write-unsigned-payload stream bulk 16)))
+			(%write-word stream bulk 16)))
     ((integer #x-FF 0)
      (progn (write-byte 9 stream)
-	    (%write-unsigned-payload stream (- bulk) 1)))
+			(%write-word stream (- bulk) 1)))
     ((integer #x-FFFF 0)
      (progn (write-byte 10 stream)
-	    (%write-unsigned-payload stream (- bulk) 2)))
+			(%write-word stream (- bulk) 2)))
     ((integer #x-FFFFFFFF 0)
      (progn (write-byte 11 stream)
-	    (%write-unsigned-payload stream (- bulk) 4)))
+			(%write-word stream (- bulk) 4)))
     ((integer #x-FFFFFFFFFFFFFFFF 0)
      (progn (write-byte 12 stream)
-	    (%write-unsigned-payload stream (- bulk) 8)))
+			(%write-word stream (- bulk) 8)))
     ((integer #x-FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 0)
      (progn (write-byte 13 stream)
-	    (%write-unsigned-payload stream (- bulk) 16)))
+			(%write-word stream (- bulk) 16)))
     (t (error 'unimplemented-serialization))))
 
 

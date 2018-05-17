@@ -1,5 +1,5 @@
  #| BULK library
-    Copyright (C) 2013 Pierre Thierry <pierre@nothos.net>
+    Copyright (C) 2013--2018 Pierre Thierry <pierre@nothos.net>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published by
@@ -14,12 +14,11 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
-(defpackage :nothos.net/2013.08.bulk-test
-  (:use :cl :hu.dwim.stefil :bulk :scheme :flexi-streams)
-  (:export #:all #:maths #:parsing #:writing)
-  (:nicknames :bulk-test))
+(defpackage :bulk/test
+  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :bulk/words :scheme :flexi-streams)
+  (:export #:all #:maths #:parsing #:writing))
 
-(in-package :nothos.net/2013.08.bulk-test)
+(in-package :bulk/test)
 
 
 (defparameter *primitives-bulk* #(1 0 3 4 12 72 101 108 108 111 32 119
@@ -40,7 +39,7 @@
 
 (defun read-bulk-seq (seq)
   (with-input-from-sequence (in seq)
-    (read-whole in)))
+    (read-whole in :version '(1 0))))
 
 
 #| custom equality predicate |#
