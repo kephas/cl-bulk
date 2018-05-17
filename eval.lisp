@@ -24,10 +24,16 @@
 (defclass lexical-environment ()
   ((table :initform (make-hash-table :test 'equal) :initarg :table)))
 
+(defgeneric set-field (env field value)
+  (:documentation "Set FIELD in ENV with new value VALUE"))
+
+(defmethod set-field ((env lexical-environment) field value)
+  (setf (gethash field (slot-value env 'table)) value))
+
+
 (defun copy/assign (env field value)
-  (let* ((table (copy-hash-table (slot-value env 'table)))
-		 (new-env (make-instance 'lexical-environment :table table)))
-	(setf (gethash field table) value)
+  (let ((new-env (make-instance 'lexical-environment :table (copy-hash-table (slot-value env 'table)))))
+	(set-field new-env field value)
 	new-env))
 
 (defmacro copy/assign! (place field value)
