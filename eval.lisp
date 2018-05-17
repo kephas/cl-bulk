@@ -15,7 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/eval
-  (:use :cl :alexandria :bulk/reference))
+  (:use :cl :alexandria :bulk/reference)
+  (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value))
 
 (in-package :bulk/eval)
 
