@@ -31,8 +31,13 @@
   (setf (gethash field (slot-value env 'table)) value))
 
 
+(defgeneric copy-env (env))
+
+(defmethod copy-env ((env lexical-environment))
+  (make-instance 'lexical-environment :table (copy-hash-table (slot-value env 'table))))
+
 (defun copy/assign (env field value)
-  (let ((new-env (make-instance 'lexical-environment :table (copy-hash-table (slot-value env 'table)))))
+  (let ((new-env (copy-env env)))
 	(set-value new-env field value)
 	new-env))
 
@@ -47,7 +52,8 @@
 
 (defclass compound-lexical-environment ()
   ((normal-env :initarg :normal)
-   (lasting-env :initform (make-instance 'lexical-environment))))
+   (lasting-env :initform (make-instance 'lexical-environment) :initarg :lasting)
+   (policy :initarg :policy)))
 
 (defmethod get-value ((env compound-lexical-environment) field)
   (with-slots (normal-env lasting-env) env
@@ -55,3 +61,20 @@
 	  (if found?
 		  value
 		  (get-value normal-env field)))))
+
+(defmethod set-value ((env compound-lexical-environment) field value)
+  (with-slots (normal-env lasting-env policy) env
+	(if (funcall policy field)
+		(set-value lasting-env field value)
+		(set-value normal-env field value))))
+
+(defmethod copy-env ((env compound-lexical-environment))
+  (with-slots (normal-env lasting-env policy) env
+	(make-instance 'compound-lexical-environment
+				   :normal (copy-env normal-env)
+				   :lasting (copy-env lasting-env)
+				   :policy policy)))
+
+(defun policy/ns (ns)
+  (lambda (field)
+	(equal ns (second field))))
