@@ -124,3 +124,12 @@
 		 (env2 (copy/assign env1 "foo" 20)))
 	(is (= 10 (get-value env1 "foo")))
 	(is (= 20 (get-value env2 "foo")))))
+
+(deftest compound ()
+  (let ((env (make-instance 'compound-lexical-environment
+							:normal (copy/assign (make-instance 'lexical-environment) '(:value (:foo :bar) 34) 0)
+							:policy (policy/ns '(:foo :bar)))))
+	(copy/assign! env '(:value (:foo :bar) 34) 43)
+	(copy/assign! env '(:value (:foo :quux) 34) 54)
+	(is (= 43 (get-value (get-lasting env) '(:value (:foo :bar) 34))))
+	(is (not (get-value (get-lasting env) '(:value (:foo :quux) 34))))))

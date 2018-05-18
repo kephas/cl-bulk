@@ -16,7 +16,8 @@
 
 (uiop:define-package :bulk/eval
   (:use :cl :alexandria :metabang-bind :bulk/reference)
-  (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value))
+  (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value
+		   #:compound-lexical-environment #:policy/ns #:get-lasting))
 
 (in-package :bulk/eval)
 
@@ -52,7 +53,7 @@
 
 (defclass compound-lexical-environment ()
   ((normal-env :initarg :normal)
-   (lasting-env :initform (make-instance 'lexical-environment) :initarg :lasting)
+   (lasting-env :initform (make-instance 'lexical-environment) :initarg :lasting :reader get-lasting)
    (policy :initarg :policy)))
 
 (defmethod get-value ((env compound-lexical-environment) field)
