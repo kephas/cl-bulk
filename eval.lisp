@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/eval
-  (:use :cl :alexandria :bulk/reference)
+  (:use :cl :alexandria :metabang-bind :bulk/reference)
   (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value))
 
 (in-package :bulk/eval)
@@ -39,5 +39,19 @@
 (defmacro copy/assign! (place field value)
   `(setf ,place (copy/assign ,place ,field ,value)))
 
-(defun get-value (env field)
+(defgeneric get-value (env field))
+
+(defmethod get-value ((env lexical-environment) field)
   (gethash field (slot-value env 'table)))
+
+
+(defclass compound-lexical-environment ()
+  ((normal-env :initarg :normal)
+   (lasting-env :initform (make-instance 'lexical-environment))))
+
+(defmethod get-value ((env compound-lexical-environment) field)
+  (with-slots (normal-env lasting-env) env
+	(bind (((:values value found?) (get-value lasting-env field)))
+	  (if found?
+		  value
+		  (get-value normal-env field)))))
