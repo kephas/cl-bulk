@@ -15,8 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (defpackage :bulk/test
-  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :bulk/words :scheme :flexi-streams)
-  (:export #:all #:maths #:parsing #:writing))
+  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :bulk/words :bulk/eval :scheme :flexi-streams)
+  (:export #:all #:maths #:parsing #:writing #:evaluation))
 
 (in-package :bulk/test)
 
@@ -107,3 +107,20 @@
 (deftest write-references ()
   (is (egal? *references-bulk* (with-output-to-sequence (out)
 				 (write-whole out *references*)))))
+
+(in-suite all)
+(defsuite* evaluation)
+
+(deftest assign ()
+  (let ((env (make-instance 'lexical-environment)))
+	(copy/assign! env "foo" 2)
+	(copy/assign! env "bar" 3)
+	(is (= 2 (get-value env "foo")))
+	(is (= 3 (get-value env "bar")))
+	(is (not (get-value env "quux")))))
+
+(deftest immutability ()
+  (let* ((env1 (copy/assign (make-instance 'lexical-environment) "foo" 10))
+		 (env2 (copy/assign env1 "foo" 20)))
+	(is (= 10 (get-value env1 "foo")))
+	(is (= 20 (get-value env2 "foo")))))
