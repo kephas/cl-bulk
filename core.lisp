@@ -55,4 +55,4 @@
 				(#x35 "property-list")))
   (copy/assign! *core-1.0* `(:mnemonic ,+core+ ,(first pair)) (second pair)))
 
-(copy/assign! *core-1.0* :encoding :utf-8)
+(copy/assign! *core-1.0* '(:encoding) :utf-8)

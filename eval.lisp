@@ -77,4 +77,5 @@
 
 (defun policy/ns (ns)
   (lambda (field)
-	(equal ns (second field))))
+	(and (member (first field) '(:mnemonic :value :semantic))
+		 (equal ns (second field)))))
