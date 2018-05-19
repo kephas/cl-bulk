@@ -15,7 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (defpackage :bulk/test
-  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :bulk/words :bulk/eval :scheme :flexi-streams)
+  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :bulk/words :bulk/eval :bulk/core :scheme :flexi-streams)
+  (:shadowing-import-from :bulk/eval #:eval)
   (:export #:all #:maths #:parsing #:writing #:evaluation))
 
 (in-package :bulk/test)
@@ -133,3 +134,11 @@
 	(copy/assign! env '(:value (:foo :quux) 34) 54)
 	(is (= 43 (get-value (get-lasting env) '(:value (:foo :bar) 34))))
 	(is (not (get-value (get-lasting env) '(:value (:foo :quux) 34))))))
+
+(deftest eval-one ()
+  (let ((env *core-1.0*))
+	(copy/assign! env '(:marker 99) '(:foo :bar))
+	(copy/assign! env '(:value (:foo :bar) 3) "quux")
+	(is (egal? (ref 42 0) (eval (ref 42 0) env)))
+	(is (egal? (ref '(:std :core) 2) (eval (ref 32 2) env)))
+	(is (egal? "quux" (eval (ref 99 3) env)))))

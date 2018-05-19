@@ -15,7 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/core
-  (:use :cl :bulk/eval))
+  (:use :cl :bulk/eval)
+  (:shadowing-import-from :bulk/eval #:eval)
+  (:export #:*core-1.0*))
 
 (in-package :bulk/core)
 

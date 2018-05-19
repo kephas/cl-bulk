@@ -16,8 +16,10 @@
 
 (uiop:define-package :bulk/eval
   (:use :cl :alexandria :metabang-bind :bulk/reference)
+  (:shadow #:eval)
   (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value
-		   #:compound-lexical-environment #:policy/ns #:get-lasting))
+		   #:compound-lexical-environment #:policy/ns #:get-lasting
+		   #:eval))
 
 (in-package :bulk/eval)
 
@@ -80,3 +82,12 @@
   (lambda (field)
 	(and (member (first field) '(:mnemonic :value :semantic))
 		 (equal ns (second field)))))
+
+(defun eval (expr env)
+  (typecase expr
+	(ref (with-slots (ns name) expr
+		   (if-let (ns* (get-value env `(:marker ,ns)))
+			 (if-let (value (get-value env `(:value ,ns* ,name)))
+			   value
+			   (ref ns* name))
+			 expr)))))
