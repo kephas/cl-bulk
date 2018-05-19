@@ -83,11 +83,16 @@
 	(and (member (first field) '(:mnemonic :value :semantic))
 		 (equal ns (second field)))))
 
+
+(defclass qualified-ref (ref) ())
+
 (defun eval (expr env)
   (typecase expr
+	(qualified-ref (with-slots (ns name) expr
+					 (if-let (value (get-value env `(:value ,ns ,name)))
+					   value
+					   expr)))
 	(ref (with-slots (ns name) expr
 		   (if-let (ns* (get-value env `(:marker ,ns)))
-			 (if-let (value (get-value env `(:value ,ns* ,name)))
-			   value
-			   (ref ns* name))
+			 (make-instance 'qualified-ref :ns ns* :name name)
 			 expr)))))
