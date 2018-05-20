@@ -84,6 +84,21 @@
 		 (equal ns (second field)))))
 
 
+(defun lex-ns (env number)
+  (get-value env (list :marker number)))
+
+(defun lex-mnemonic (env ns &optional name)
+  (get-value env (if name
+					 (list :mnemonic ns name)
+					 (list :mnemonic ns))))
+
+(defun lex-value (env ns name)
+  (get-value env (list :value ns name)))
+
+(defun lex-semantic (env ns name)
+  (get-value env (list :semantic ns name)))
+
+
 (defclass qualified-ref (ref) ())
 
 (defun eval (expr env)
