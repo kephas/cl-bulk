@@ -23,6 +23,7 @@
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
 		   #:lex-encoding #:get-lex-encoding
 		   #:qref #:dref
+		   #:eager-function #:lazy-function
 		   #:eval))
 
 (in-package :bulk/eval)
@@ -124,6 +125,14 @@
   'dref)
 
 
+
+(defclass bulk-function ()
+  ((function :initarg :fun)))
+
+(defclass eager-function (bulk-function) ())
+(defclass lazy-function (bulk-function) ())
+
+
 (defun map-form (function list env)
   (mapcar (lambda (obj) (funcall function obj env)) list))
 
@@ -140,10 +149,20 @@
 (defun eval (expr env)
   (typecase expr
 	(qualified-ref (with-slots (ns name) expr
-					 (if-let (value (get-value env `(:value ,ns ,name)))
+					 (if-let (value (get-lex-value env ns name))
 					   value
 					   expr)))
-	(ref (with-slots (ns name) expr
-		   (if-let (ns* (get-value env `(:marker ,ns)))
-			 (make-instance 'qualified-ref :ns ns* :name name)
-			 expr)))))
+	(dangling-ref expr)
+	(ref (eval (qualify expr env) env))
+	(list (cond
+			((null expr) nil)
+			((typep (first expr) 'ref)
+			 (with-slots (ns name) (first expr)
+			   (if-let (semantic (get-lex-semantic env ns name))
+				 (apply (slot-value semantic 'function)
+						(typecase semantic
+						  (eager-function (map-form #'eval (rest expr) env))
+						  (lazy-function (map-form #'qualify (rest expr) env))))
+				 (map-form #'eval expr env))))
+			(t (map-form #'eval expr env))))
+	(t expr)))

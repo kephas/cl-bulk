@@ -58,10 +58,11 @@
        (egal? (rest x) (rest y))))
 
 (defmethod egal? ((x ref) (y ref))
-  (and (egal? (slot-value x 'ns)
-	      (slot-value y 'ns))
+  (and (eq (type-of x) (type-of y))
+	   (egal? (slot-value x 'ns)
+			  (slot-value y 'ns))
        (egal? (slot-value x 'name)
-	      (slot-value y 'name))))
+			  (slot-value y 'name))))
 
 
 #| test suite |#
@@ -139,6 +140,6 @@
   (let ((env *core-1.0*))
 	(copy/assign! env (lex-ns 99) '(:foo :bar))
 	(copy/assign! env (lex-value '(:foo :bar) 3) "quux")
-	(is (egal? (ref 42 0) (eval (ref 42 0) env)))
-	(is (egal? (ref '(:std :core) 2) (eval (ref 32 2) env)))
+	(is (egal? (dref 42 0) (eval (ref 42 0) env)))
+	(is (egal? (qref '(:std :core) 2) (eval (ref 32 2) env)))
 	(is (egal? "quux" (eval (ref 99 3) env)))))
