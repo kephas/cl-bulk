@@ -22,6 +22,7 @@
 		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
 		   #:lex-encoding #:get-lex-encoding
+		   #:qref #:dref
 		   #:eval))
 
 (in-package :bulk/eval)
@@ -104,8 +105,24 @@
 (lex-field "ENCODING" :encoding ())
 
 
+(defclass qualified-ref (ref) ()
+  (:documentation "A qualified reference is a reference that has a namespace associated to its marker."))
 
-(defclass qualified-ref (ref) ())
+(defun qref (ns name)
+  (make-instance 'qualified-ref :ns ns :name name))
+
+(defmethod ref-constructor ((ref qualified-ref))
+  'qref)
+
+(defclass dangling-ref (ref) ()
+  (:documentation "A dangling reference is a reference that has no namespace associated to its marker."))
+
+(defun dref (ns name)
+  (make-instance 'dangling-ref :ns ns :name name))
+
+(defmethod ref-constructor ((ref dangling-ref))
+  'dref)
+
 
 (defun eval (expr env)
   (typecase expr

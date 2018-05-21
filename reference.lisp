@@ -15,8 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/reference
-  (:use :cl)
-  (:export #:ref #:ns #:name))
+  (:use :cl :alexandria)
+  (:export #:ref #:ns #:name #:ref-constructor))
 
 (in-package :bulk/reference)
 
@@ -27,6 +27,20 @@
 (defun ref (ns name)
   (make-instance 'ref :ns ns :name name))
 
+
+(defgeneric ref-constructor (ref)
+  (:documentation "Return the function used to construct a reference"))
+
+(defmethod ref-constructor (ref)
+  nil)
+
+(defmethod ref-constructor ((ref ref))
+  'ref)
+
+
 (defmethod print-object ((object ref) stream)
   (with-slots (ns name) object
-    (format stream "(REF ~a ~a)" ns name))) 
+	(if-let (constructor (ref-constructor object))
+	  (format stream "(~a ~a ~a)" constructor ns name)
+	  (print-unreadable-object (object stream :type t :identity t)
+		(format stream "~a ~a" ns name)))))
