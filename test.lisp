@@ -15,8 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (defpackage :bulk/test
-  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :bulk/words :scheme :flexi-streams)
-  (:export #:all #:maths #:parsing #:writing))
+  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :bulk/words :bulk/eval :bulk/core :scheme :flexi-streams)
+  (:shadowing-import-from :bulk/eval #:eval)
+  (:export #:all #:maths #:parsing #:writing #:evaluation))
 
 (in-package :bulk/test)
 
@@ -57,10 +58,11 @@
        (egal? (rest x) (rest y))))
 
 (defmethod egal? ((x ref) (y ref))
-  (and (egal? (slot-value x 'ns)
-	      (slot-value y 'ns))
+  (and (eq (type-of x) (type-of y))
+	   (egal? (slot-value x 'ns)
+			  (slot-value y 'ns))
        (egal? (slot-value x 'name)
-	      (slot-value y 'name))))
+			  (slot-value y 'name))))
 
 
 #| test suite |#
@@ -107,3 +109,43 @@
 (deftest write-references ()
   (is (egal? *references-bulk* (with-output-to-sequence (out)
 				 (write-whole out *references*)))))
+
+(in-suite all)
+(defsuite* evaluation)
+
+(deftest assign ()
+  (let ((env (make-instance 'lexical-environment)))
+	(copy/assign! env "foo" 2)
+	(copy/assign! env "bar" 3)
+	(is (= 2 (get-value env "foo")))
+	(is (= 3 (get-value env "bar")))
+	(is (not (get-value env "quux")))))
+
+(deftest immutability ()
+  (let* ((env1 (copy/assign (make-instance 'lexical-environment) "foo" 10))
+		 (env2 (copy/assign env1 "foo" 20)))
+	(is (= 10 (get-value env1 "foo")))
+	(is (= 20 (get-value env2 "foo")))))
+
+(deftest compound ()
+  (let ((env (make-instance 'compound-lexical-environment
+							:normal (copy/assign (make-instance 'lexical-environment) '(:value (:foo :bar) 34) 0)
+							:policy (policy/ns '(:foo :bar)))))
+	(copy/assign! env '(:value (:foo :bar) 34) 43)
+	(copy/assign! env '(:value (:foo :quux) 34) 54)
+	(is (= 43 (get-value (get-lasting env) '(:value (:foo :bar) 34))))
+	(is (not (get-value (get-lasting env) '(:value (:foo :quux) 34))))))
+
+(deftest eval-one ()
+  (let ((env *core-1.0*))
+	(copy/assign! env (lex-ns 99) '(:foo :bar))
+	(copy/assign! env (lex-value '(:foo :bar) 3) "quux")
+	(copy/assign! env (lex-semantic '(:foo :bar) 4) (make-instance 'eager-function :fun #'+))
+	(copy/assign! env (lex-semantic '(:foo :bar) 5) (make-instance 'eager-function :fun #'append))
+	(copy/assign! env (lex-semantic '(:foo :bar) 6) (make-instance 'lazy-function :fun #'append))
+	(is (egal? (dref 42 0) (eval (ref 42 0) env)))
+	(is (egal? (qref '(:std :core) 2) (eval (ref 32 2) env)))
+	(is (egal? "quux" (eval (ref 99 3) env)))
+	(is (egal? 6 (eval (list (ref 99 4) 1 2 3) env)))
+	(is (egal? (eval (list (ref 99 5) (list (list (ref 99 4) 1 2)) (list 3)) env) (list 3 3)))
+	(is (egal? (eval (list (ref 99 6) (list (list (ref 99 4) 1 2)) (list 3)) env) (list (list (qref '(:foo :bar) 4) 1 2) 3)))))
