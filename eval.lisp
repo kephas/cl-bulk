@@ -157,7 +157,7 @@
 	(list (cond
 			((null expr) nil)
 			((typep (first expr) 'ref)
-			 (with-slots (ns name) (first expr)
+			 (with-slots (ns name) (qualify (first expr) env)
 			   (if-let (semantic (get-lex-semantic env ns name))
 				 (apply (slot-value semantic 'function)
 						(typecase semantic
