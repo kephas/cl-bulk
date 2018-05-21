@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/core
-  (:use :cl :bulk/eval)
+  (:use :cl :bulk/eval :bulk/stringenc)
   (:shadowing-import-from :bulk/eval #:eval)
   (:export #:*core-1.0*))
 
@@ -58,3 +58,7 @@
   (copy/assign! *core-1.0* `(:mnemonic ,+core+ ,(first pair)) (second pair)))
 
 (copy/assign! *core-1.0* '(:encoding) :utf-8)
+
+(copy/assign! *core-1.0* (lex-semantic +core+ #x3) *stringenc*)
+(copy/assign! *core-1.0* (lex-semantic +core+ #x4) *iana*)
+(copy/assign! *core-1.0* (lex-semantic +core+ #x5) *codepage*)

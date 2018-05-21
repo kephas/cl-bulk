@@ -15,10 +15,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/stringenc
-  (:use :cl)
-  (:export #:iana-charset-mib->babel-name #:windows-code-page->babel-name))
+  (:use :cl :bulk/eval)
+  (:shadowing-import-from :bulk/eval #:eval)
+  (:export #:*stringenc* #:*iana* #:*codepage*))
 
 (in-package :bulk/stringenc)
+
+(defun stringenc (env encoding)
+  (values nil (copy/assign env (lex-encoding) encoding)))
 
 (defun iana-charset-mib->babel-name (mib-enum)
   (case mib-enum
@@ -76,3 +80,7 @@
 	(28605 :iso-8859-15)
 	(51932 :eucjp)
 	(65001 :utf-8)))
+
+(defvar *stringenc* (make-instance 'impure-eager-function :fun #'stringenc))
+(defvar *iana* (make-instance 'eager-function :fun #'iana-charset-mib->babel-name))
+(defvar *codepage* (make-instance 'eager-function :fun #'windows-code-page->babel-name))

@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (defpackage :bulk/test
-  (:use :cl :hu.dwim.stefil :bulk/read :bulk/write :bulk/words :bulk/eval :bulk/core :scheme :flexi-streams)
+  (:use :cl :hu.dwim.stefil :metabang-bind :bulk/read :bulk/write :bulk/words :bulk/eval :bulk/core :scheme :flexi-streams)
   (:shadowing-import-from :bulk/eval #:eval)
   (:export #:all #:maths #:parsing #:writing #:evaluation))
 
@@ -149,3 +149,17 @@
 	(is (egal? 6 (eval (list (ref 99 4) 1 2 3) env)))
 	(is (egal? (eval (list (ref 99 5) (list (list (ref 99 4) 1 2)) (list 3)) env) (list 3 3)))
 	(is (egal? (eval (list (ref 99 6) (list (list (ref 99 4) 1 2)) (list 3)) env) (list (list (qref '(:foo :bar) 4) 1 2) 3)))))
+
+(deftest stringenc ()
+  (is (eq :iso-8859-15
+		 (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 4) 111)) *core-1.0*)))
+		   (get-lex-encoding env))))
+  (is (eq :utf-8
+		  (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 4) 106)) *core-1.0*)))
+			(get-lex-encoding env))))
+  (is (eq :utf-32
+		  (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 5) 12000)) *core-1.0*)))
+			(get-lex-encoding env))))
+  (is (eq :us-ascii
+		  (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 5) 20127)) *core-1.0*)))
+			(get-lex-encoding env)))))
