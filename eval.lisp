@@ -23,8 +23,8 @@
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
 		   #:lex-encoding #:get-lex-encoding
 		   #:qref #:dref
-		   #:eager-function #:lazy-function
-		   #:eval))
+		   #:eager-function #:lazy-function #:impure-eager-function #:impure-lazy-function
+		   #:map-form #:qualify #:eval))
 
 (in-package :bulk/eval)
 
@@ -132,6 +132,12 @@
 (defclass eager-function (bulk-function) ())
 (defclass lazy-function (bulk-function) ())
 
+(defclass impure-function (bulk-function) ()
+  (:documentation "An impure function has side-effects on the lexical environment. Its Lisp function will get the environment as its first argument."))
+(defclass impure-eager-function (eager-function impure-function) ())
+(defclass impure-lazy-function (lazy-function impure-function) ())
+
+
 
 (defun map-form (function list env)
   (mapcar (lambda (obj) (funcall function obj env)) list))
@@ -158,11 +164,20 @@
 			((null expr) nil)
 			((typep (first expr) 'ref)
 			 (with-slots (ns name) (qualify (first expr) env)
-			   (if-let (semantic (get-lex-semantic env ns name))
-				 (apply (slot-value semantic 'function)
-						(typecase semantic
-						  (eager-function (map-form #'eval (rest expr) env))
-						  (lazy-function (map-form #'qualify (rest expr) env))))
-				 (map-form #'eval expr env))))
+			   (let* ((function (if-let (semantic (get-lex-semantic env ns name))
+								  semantic
+								  (if-let (value (get-lex-value env ns name))
+									(if (typep value 'bulk-function)
+										value))))
+					  (args-handler (typecase function
+									  (eager-function #'eval)
+									  (lazy-function #'qualify))))
+				 (if function
+					 (let ((args (map-form args-handler (rest expr) env))
+						   (callable (slot-value function 'function)))
+					   (if (typep function 'impure-function)
+						   (apply callable env args)
+						   (apply callable args)))
+					 (map-form #'eval expr env)))))
 			(t (map-form #'eval expr env))))
 	(t expr)))
