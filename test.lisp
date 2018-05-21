@@ -137,8 +137,8 @@
 
 (deftest eval-one ()
   (let ((env *core-1.0*))
-	(copy/assign! env '(:marker 99) '(:foo :bar))
-	(copy/assign! env '(:value (:foo :bar) 3) "quux")
+	(copy/assign! env (lex-ns 99) '(:foo :bar))
+	(copy/assign! env (lex-value '(:foo :bar) 3) "quux")
 	(is (egal? (ref 42 0) (eval (ref 42 0) env)))
 	(is (egal? (ref '(:std :core) 2) (eval (ref 32 2) env)))
 	(is (egal? "quux" (eval (ref 99 3) env)))))

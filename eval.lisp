@@ -19,6 +19,9 @@
   (:shadow #:eval)
   (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
+		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
+		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
+		   #:lex-encoding #:get-lex-encoding
 		   #:eval))
 
 (in-package :bulk/eval)
@@ -84,19 +87,22 @@
 		 (equal ns (second field)))))
 
 
-(defun lex-ns (env number)
-  (get-value env (list :marker number)))
 
-(defun lex-mnemonic (env ns &optional name)
-  (get-value env (if name
-					 (list :mnemonic ns name)
-					 (list :mnemonic ns))))
+(defmacro lex-field (name symbol (&rest params))
+  (let ((field (intern (format nil "LEX-~a" name)))
+		(get (intern (format nil "GET-LEX-~a" name))))
+	`(progn
+	   (defun ,field (,@params)
+		 (list ,symbol ,@params))
+	   (defun ,get (env ,@params)
+		 (get-value env (,field ,@params))))))
 
-(defun lex-value (env ns name)
-  (get-value env (list :value ns name)))
+(lex-field "NS" :marker (number))
+(lex-field "MNEMONIC" :mnemonic (ns name))
+(lex-field "VALUE" :value (ns name))
+(lex-field "SEMANTIC" :semantic (ns name))
+(lex-field "ENCODING" :encoding ())
 
-(defun lex-semantic (env ns name)
-  (get-value env (list :semantic ns name)))
 
 
 (defclass qualified-ref (ref) ())
