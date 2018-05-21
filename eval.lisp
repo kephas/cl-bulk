@@ -124,6 +124,19 @@
   'dref)
 
 
+(defun map-form (function list env)
+  (mapcar (lambda (obj) (funcall function obj env)) list))
+
+(defun qualify (expr env)
+  (typecase expr
+	(qualified-ref expr)
+	(ref (with-slots (ns name) expr
+		   (if-let (ns* (get-lex-ns env ns))
+			 (qref ns* name)
+			 (dref ns name))))
+	(list (map-form #'qualify expr env))
+	(t expr)))
+
 (defun eval (expr env)
   (typecase expr
 	(qualified-ref (with-slots (ns name) expr
