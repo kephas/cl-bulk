@@ -16,7 +16,7 @@
 
 (uiop:define-package :bulk/words
   (:use :cl :scheme)
-  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes))
+  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes #:word #:bytes #:unsigned-integer))
 
 (in-package :bulk/words)
 
@@ -48,3 +48,10 @@ notation"
 			(last (append (repeat (if (zerop word) 0 255) (- length (length bytes))) bytes) length)
 			bytes)
 		(rec (cons (ldb (byte byte-size 0) word) bytes) (ash word (- byte-size))))))
+
+
+(defclass word ()
+  ((bytes :initarg :bytes)))
+
+(defun unsigned-integer (word)
+  (bytes->word (slot-value word 'bytes)))

@@ -42,6 +42,14 @@
   (with-input-from-sequence (in seq)
     (read-whole in :version '(1 0))))
 
+(defun resolve-words (yield)
+  (mapcar (lambda (obj)
+			(typecase obj
+			  (word (unsigned-integer obj))
+			  (list (resolve-words obj))
+			  (t obj)))
+		  yield))
+
 
 #| custom equality predicate |#
 
@@ -87,7 +95,7 @@
 (defsuite* parsing)
 
 (deftest read-primitives ()
-  (is (egal? *primitives* (read-bulk-seq *primitives-bulk*))))
+  (is (egal? *primitives* (resolve-words (read-bulk-seq *primitives-bulk*)))))
 
 (deftest read-nesting ()
   (is (egal? *nesting* (read-bulk-seq *nesting-bulk*))))
