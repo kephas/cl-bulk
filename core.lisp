@@ -71,3 +71,6 @@
 	  (values value (copy/assign env (lex-value ns name) value)))))
 
 (copy/assign! *core-1.0* (lex-semantic +core+ #x9) (make-instance 'impure-lazy-function :fun #'define))
+
+
+(copy/assign! *core-1.0* (lex-semantic +core+ #x20) (make-instance 'eager-function :fun (lambda (x y) (/ x y))))

@@ -103,6 +103,9 @@
 			(%write-word stream (- bulk) 16)))
     (t (error 'unimplemented-serialization))))
 
+(defmethod write-bulk (stream (bulk ratio))
+  (write-bulk stream (list (ref #x20 #x20) (numerator bulk) (denominator bulk))))
+
 
 (defmethod write-bulk (stream (bulk ref))
   (with-slots (ns name) bulk

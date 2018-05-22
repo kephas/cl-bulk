@@ -202,3 +202,5 @@
 		  (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 5) 20127)) *core-1.0*)))
 			(get-lex-encoding env)))))
 
+(deftest arithmetic ()
+  (is (= (/ 3 8) (eval (list (ref #x20 #x20) 3 8) *core-1.0*))))
