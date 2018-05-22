@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/core
-  (:use :cl :bulk/eval :bulk/stringenc :bulk/reference)
+  (:use :cl :bulk/eval :bulk/stringenc :bulk/reference :bulk/words)
   (:shadowing-import-from :bulk/eval #:eval)
   (:export #:*core-1.0*))
 
@@ -46,7 +46,7 @@
 				(#x12 "arg")
 				(#x13 "rest")
 				(#x20 "frac")
-				(#x21 "bigin")
+				(#x21 "bigint")
 				(#x22 "binary")
 				(#x23 "decimal")
 				(#x30 "prefix-bytecode")
@@ -74,3 +74,4 @@
 
 
 (copy/assign! *core-1.0* (lex-semantic +core+ #x20) (make-instance 'eager-function :fun (lambda (x y) (/ x y))))
+(copy/assign! *core-1.0* (lex-semantic +core+ #x21) (make-instance 'lazy-function :fun #'signed-integer))

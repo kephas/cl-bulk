@@ -16,7 +16,8 @@
 
 (uiop:define-package :bulk/words
   (:use :cl :scheme)
-  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes #:word #:bytes #:unsigned-integer))
+  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes #:word #:bytes
+		   #:unsigned-integer #:signed-integer))
 
 (in-package :bulk/words)
 
@@ -53,5 +54,12 @@ notation"
 (defclass word ()
   ((bytes :initarg :bytes)))
 
+(defun word (&rest bytes)
+  (make-instance 'word :bytes bytes))
+
 (defun unsigned-integer (word)
   (bytes->word (slot-value word 'bytes)))
+
+(defun signed-integer (word)
+  (with-slots (bytes) word
+	(parse-2c-notation (bytes->word bytes) (length bytes))))

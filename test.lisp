@@ -211,4 +211,5 @@
 			(get-lex-encoding env)))))
 
 (deftest arithmetic ()
-  (is (= (/ 3 8) (eval (list (ref #x20 #x20) 3 8) *core-1.0*))))
+  (is (= (/ 3 8) (eval (list (ref #x20 #x20) 3 8) *core-1.0*)))
+  (is (= -1 (eval (list (ref #x20 #x21) (word #xFF #xFF)) *core-1.0*))))
