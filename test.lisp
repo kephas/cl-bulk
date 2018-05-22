@@ -174,6 +174,20 @@
 	(is (egal? (eval (list (ref 99 5) (list (list (ref 99 4) 1 2)) (list 3)) env) (list 3 3)))
 	(is (egal? (eval (list (ref 99 6) (list (list (ref 99 4) 1 2)) (list 3)) env) (list (list (qref '(:foo :bar) 4) 1 2) 3)))))
 
+(deftest eval-many ()
+  (let ((env *core-1.0*))
+	(copy/assign! env (lex-ns 255) '(:foo :bar))
+	(copy/assign! env (lex-semantic '(:foo :bar) 0) (make-instance 'eager-function :fun #'+))
+	(is (egal? '(1 2 3 4 10) (eval-whole `((,(ref 32 9) ,(ref 255 10) 1)
+										   (,(ref 32 9) ,(ref 255 20) 2)
+										   (,(ref 32 9) ,(ref 255 30) 3)
+										   (,(ref 32 9) ,(ref 255 40) 4)
+										   (,(ref 255 0)
+											 (,(ref 255 0) ,(ref 255 10) ,(ref 255 20))
+											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
+
+(defsuite* core)
+
 (deftest stringenc ()
   (is (eq :iso-8859-15
 		 (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 4) 111)) *core-1.0*)))
@@ -188,14 +202,3 @@
 		  (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 5) 20127)) *core-1.0*)))
 			(get-lex-encoding env)))))
 
-(deftest eval-many ()
-  (let ((env *core-1.0*))
-	(copy/assign! env (lex-ns 255) '(:foo :bar))
-	(copy/assign! env (lex-semantic '(:foo :bar) 0) (make-instance 'eager-function :fun #'+))
-	(is (egal? '(1 2 3 4 10) (eval-whole `((,(ref 32 9) ,(ref 255 10) 1)
-										   (,(ref 32 9) ,(ref 255 20) 2)
-										   (,(ref 32 9) ,(ref 255 30) 3)
-										   (,(ref 32 9) ,(ref 255 40) 4)
-										   (,(ref 255 0)
-											 (,(ref 255 0) ,(ref 255 10) ,(ref 255 20))
-											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
