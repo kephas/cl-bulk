@@ -45,9 +45,13 @@ notation"
   (let@ rec ((bytes nil)
 			 (word word))
 	(if (or (eql word 0) (eql word -1))
-		(if length
-			(last (append (repeat (if (zerop word) 0 255) (- length (length bytes))) bytes) length)
-			bytes)
+		(if bytes
+			(if (and (eql word -1) (not (logbitp 7 (first bytes))))
+				(rec (cons 255 bytes) -1)
+				(if length
+					(last (append (repeat (if (zerop word) 0 255) (- length (length bytes))) bytes) length)
+					bytes))
+			(rec (if (zerop word) '(0) '(255)) word))
 		(rec (cons (ldb (byte byte-size 0) word) bytes) (ash word (- byte-size))))))
 
 

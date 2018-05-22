@@ -80,15 +80,15 @@
 (in-suite all)
 (defsuite* maths)
 
-(defparameter *specs-2c* '((-5 #xFB 1)(0 0 1)(0 0 4)(#x-80 #x80 1)(#x-7F #x81 1)(#x7F #x7F 1)(#x-7F #xFF81 2)))
+(defparameter *specs-2c* '((-5 (#xFB))(0 (0))(#x-80 (#x80))(#x-7F (#x81))(#x7F (#x7F))(#x-81 (#xFF #x7F))))
 
 (deftest make-2c ()
   (dolist (specs *specs-2c*)
-    (is (= (make-2c-notation (first specs) (third specs)) (second specs)))))
+    (is (egal? (word->bytes (first specs)) (second specs)))))
 
 (deftest parse-2c ()
   (dolist (specs *specs-2c*)
-    (is (= (parse-2c-notation (second specs) (third specs)) (first specs)))))
+    (is (egal? (signed-integer (make-instance 'word :bytes (second specs))) (first specs)))))
 
 
 (in-suite all)
