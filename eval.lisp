@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/eval
-  (:use :cl :alexandria :metabang-bind :bulk/reference)
+  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference)
   (:shadow #:eval)
   (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
@@ -24,7 +24,7 @@
 		   #:lex-encoding #:get-lex-encoding
 		   #:qref #:dref
 		   #:eager-function #:lazy-function #:impure-eager-function #:impure-lazy-function
-		   #:map-form #:qualify #:eval))
+		   #:map-form #:qualify #:eval #:eval-whole))
 
 (in-package :bulk/eval)
 
@@ -181,3 +181,12 @@
 					 (map-form #'eval expr env)))))
 			(t (map-form #'eval expr env))))
 	(t expr)))
+
+(defun eval-whole (sequence env)
+  (let@ rec ((sequence sequence)
+			 (env env)
+			 (yield))
+	(if sequence
+		(bind (((:values expr new-env) (eval (first sequence) env)))
+		  (rec (rest sequence) (if new-env new-env env) (if expr (cons expr yield) yield)))
+		(reverse yield))))
