@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/core
-  (:use :cl :bulk/eval :bulk/stringenc)
+  (:use :cl :bulk/eval :bulk/stringenc :bulk/reference)
   (:shadowing-import-from :bulk/eval #:eval)
   (:export #:*core-1.0*))
 
@@ -62,3 +62,12 @@
 (copy/assign! *core-1.0* (lex-semantic +core+ #x3) *stringenc*)
 (copy/assign! *core-1.0* (lex-semantic +core+ #x4) *iana*)
 (copy/assign! *core-1.0* (lex-semantic +core+ #x5) *codepage*)
+
+
+(defun define (env ref value)
+  (let ((ref (qualify ref env))
+		(value (eval value env)))
+	(with-slots (ns name) ref
+	  (values value (copy/assign env (lex-value ns name) value)))))
+
+(copy/assign! *core-1.0* (lex-semantic +core+ #x9) (make-instance 'impure-lazy-function :fun #'define))
