@@ -224,6 +224,11 @@
 		  (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 5) 20127)) *core-1.0*)))
 			(get-lex-encoding env)))))
 
+(defparameter *pies* '(3.141592653589793d0 3.1415927f0))
+(defparameter *pies-bulk* #(1 32 34 7 64 9 33 251 84 68 45 24 2 1 32 34 6 64 73 15 219 2))
+
 (deftest arithmetic ()
   (is (= (/ 3 8) (eval (list (ref #x20 #x20) 3 8) *core-1.0*)))
-  (is (= -1 (eval (list (ref #x20 #x21) (word #xFF #xFF)) *core-1.0*))))
+  (is (= -1 (eval (list (ref #x20 #x21) (word #xFF #xFF)) *core-1.0*)))
+  (is (egal? *pies-bulk* (with-output-to-sequence (out) (write-whole out *pies*))))
+  (is (egal? *pies* (eval-whole (read-bulk-seq *pies-bulk*) *core-1.0*))))

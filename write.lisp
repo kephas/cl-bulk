@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/write
-  (:use :cl :bulk/reference :bulk/words :scheme :trivial-utf-8)
+  (:use :cl :bulk/reference :bulk/words :scheme :trivial-utf-8 :ieee-floats)
   (:export #:write-bulk #:write-whole
 		   #:arbitrary-bytes
 		   #:create-bulk-file #:append-to-bulk-file
@@ -94,6 +94,16 @@
 
 (defmethod write-bulk (stream (bulk ratio))
   (write-bulk stream (list (ref #x20 #x20) (numerator bulk) (denominator bulk))))
+
+(defmethod write-bulk (stream (bulk float))
+  (cond
+	((<= (float-precision bulk) 24)
+	 (write-bulk stream (list (ref #x20 #x22)
+							  (make-instance 'word :bytes (word->bytes (encode-float32 bulk) :length 4)))))
+	((<= (float-precision bulk) 53)
+	 (write-bulk stream (list (ref #x20 #x22)
+							  (make-instance 'word :bytes (word->bytes (encode-float64 bulk) :length 8)))))
+	(t (error 'unimplemented-serialization))))
 
 
 (defmethod write-bulk (stream (bulk ref))
