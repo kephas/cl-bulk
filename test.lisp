@@ -22,12 +22,22 @@
 (in-package :bulk/test)
 
 
-(defparameter *primitives-bulk* #(1 0 3 4 12 72 101 108 108 111 32 119
-111 114 108 100 33 4 42 5 1 0 6 1 0 0 0 7 1 35 69 103 137 171 205 239
-9 128 2))
-(defparameter *primitives* '((:nil #(#x48 #x65 #x6C #x6C #x6F #x20
-#x77 #x6F #x72 #x6C #x64 #x21) #x2A #x100 #x1000000 #x123456789ABCDEF
-#x-80)))
+(defparameter *primitives* '((:nil #(0))
+							 (nil #(1 2))
+							 (#(1 2 3) #(3 4 3 1 2 3))
+							 (0 #(4 0))
+							 (#x0F #(4 #x0F))
+							 (#x0F1F #(5 #x0F #x1F))
+							 (#x1F2F3F #(6 0 #x1F #x2F #x3F))
+							 (#x0F1F2F3F #(6 #x0F #x1F #x2F #x3F))
+							 (#x0F1F2F3F4F5F6F7F #(7 #x0F #x1F #x2F #x3F #x4F #x5F #x6F #x7F))
+							 (#x0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFFF #(8 #x0F #x1F #x2F #x3F #x4F #x5F #x6F #x7F #x8F #x9F #xAF #xBF #xCF #xDF #xEF #xFF))
+							 (#x-0F #(9 #x0F))
+							 (#x-0F1F #(10 #x0F #x1F))
+							 (#x-1F2F3F #(11 0 #x1F #x2F #x3F))
+							 (#x-0F1F2F3F #(11 #x0F #x1F #x2F #x3F))
+							 (#x-0F1F2F3F4F5F6F7F #(12 #x0F #x1F #x2F #x3F #x4F #x5F #x6F #x7F))
+							 (#x-0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFFF #(13 #x0F #x1F #x2F #x3F #x4F #x5F #x6F #x7F #x8F #x9F #xAF #xBF #xCF #xDF #xEF #xFF))))
 
 (defparameter *nesting-bulk* #(0 1 2 1 1 2 1 2 2))
 (defparameter *nesting* '(:nil nil (nil nil)))
@@ -95,7 +105,9 @@
 (defsuite* parsing)
 
 (deftest read-primitives ()
-  (is (egal? *primitives* (resolve-words (read-bulk-seq *primitives-bulk*)))))
+  (dolist (spec *primitives*)
+	(is (egal? (first spec)
+			   (first (resolve-words (read-bulk-seq (second spec))))))))
 
 (deftest read-nesting ()
   (is (egal? *nesting* (read-bulk-seq *nesting-bulk*))))
@@ -107,8 +119,10 @@
 (defsuite* writing)
 
 (deftest write-primitives ()
-  (is (egal? *primitives-bulk* (with-output-to-sequence (out)
-				 (write-whole out *primitives*)))))
+  (dolist (spec *primitives*)
+	(is (egal? (second spec)
+			   (with-output-to-sequence (out)
+				 (write-bulk out (first spec)))))))
 
 (deftest write-nesting ()
   (is (egal? *nesting-bulk* (with-output-to-sequence (out)
