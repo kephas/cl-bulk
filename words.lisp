@@ -16,7 +16,7 @@
 
 (uiop:define-package :bulk/words
   (:use :cl :scheme)
-  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes #:word #:get-bytes
+  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes #:word* #:word #:get-bytes
 		   #:unsigned-integer #:signed-integer))
 
 (in-package :bulk/words)
@@ -61,8 +61,11 @@ notation"
 (defclass word ()
   ((bytes :initarg :bytes :reader get-bytes)))
 
-(defun word (&rest bytes)
+(defun word* (bytes)
   (make-instance 'word :bytes bytes))
+
+(defun word (&rest bytes)
+  (word* bytes))
 
 (defmethod get-bytes ((object array)) object)
 
