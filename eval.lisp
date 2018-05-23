@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/eval
-  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference)
+  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words)
   (:shadow #:eval)
   (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value #:apply-env!
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
@@ -174,6 +174,7 @@
 					   expr)))
 	(dangling-ref expr)
 	(ref (eval (qualify expr env) env))
+	(word (unsigned-integer expr))
 	(list (cond
 			((null expr) nil)
 			((typep (first expr) 'ref)
