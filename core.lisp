@@ -15,9 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/core
-  (:use :cl :bulk/eval :bulk/stringenc :bulk/reference :bulk/words)
+  (:use :cl :bulk/eval :bulk/stringenc :bulk/reference :bulk/words :ieee-floats)
   (:shadowing-import-from :bulk/eval #:eval)
-  (:export #:*core-1.0*))
+  (:export #:*core-1.0* #:unsupported-float))
 
 (in-package :bulk/core)
 
@@ -75,3 +75,18 @@
 
 (copy/assign! *core-1.0* (lex-semantic +core+ #x20) (make-instance 'eager-function :fun (lambda (x y) (/ x y))))
 (copy/assign! *core-1.0* (lex-semantic +core+ #x21) (make-instance 'lazy-function :fun #'signed-integer))
+
+
+(define-condition unsupported-float (error)
+  ((size :initarg :size)))
+
+(defun binary-float (bytes)
+  (let* ((%bytes (get-bytes bytes))
+		 (length (length %bytes))
+		 (bits (bytes->word %bytes)))
+	(case length
+	  (4 (decode-float32 bits))
+	  (8 (decode-float64 bits))
+	  (t (error 'unsupported-float :size (* 8 length))))))
+
+(copy/assign! *core-1.0* (lex-semantic +core+ #x22) (make-instance 'lazy-function :fun #'binary-float))
