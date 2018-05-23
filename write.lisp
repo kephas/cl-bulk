@@ -102,7 +102,7 @@
      (progn (write-byte 13 stream)
 			(%write-word stream (- bulk) 16)))
     (t (write-bulk stream
-				   (list (ref #x20 #x21) (coerce (word->bytes bulk) '(vector (unsigned-byte 8))))))))
+				   (list (ref #x20 #x21) (coerce (word->bytes bulk :twoc t) '(vector (unsigned-byte 8))))))))
 
 (defmethod write-bulk (stream (bulk ratio))
   (write-bulk stream (list (ref #x20 #x20) (numerator bulk) (denominator bulk))))
