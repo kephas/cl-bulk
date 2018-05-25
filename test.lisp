@@ -188,7 +188,7 @@
 	(copy/assign! env (lex-value '(:foo :bar) 3) "quux")
 	(copy/assign! env (lex-semantic '(:foo :bar) 4) (make-instance 'eager-function :fun #'+))
 	(copy/assign! env (lex-semantic '(:foo :bar) 5) (make-instance 'eager-function :fun #'append))
-	(copy/assign! env (lex-semantic '(:foo :bar) 6) (make-instance 'lazy-function :fun #'append))
+	(copy/assign! env (lex-semantic '(:foo :bar) 6) (make-instance 'lazy-function :fun (no-env #'append)))
 	(is (egal? (dref 42 0) (eval (ref 42 0) env)))
 	(is (egal? (qref '(:std :core) 2) (eval (ref 32 2) env)))
 	(is (egal? "quux" (eval (ref 99 3) env)))

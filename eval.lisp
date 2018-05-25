@@ -24,7 +24,7 @@
 		   #:lex-encoding #:get-lex-encoding
 		   #:qref #:dref
 		   #:eager-function #:lazy-function #:impure-eager-function #:impure-lazy-function
-		   #:map-form #:qualify #:eval #:eval-whole #:with-eval))
+		   #:map-form #:qualify #:eval #:no-env #:eval-whole #:with-eval))
 
 (in-package :bulk/eval)
 
@@ -192,10 +192,18 @@
 						   (callable (slot-value function 'function)))
 					   (if (typep function 'impure-function)
 						   (apply callable env args)
-						   (apply callable args)))
+						   (values ; discard possible second value from pure lazy functions
+							(if (typep function 'lazy-function)
+								(apply callable env args) ; lazy function need to eval/qualify
+								(apply callable args)))))
 					 (map-form #'eval expr env)))))
 			(t (map-form #'eval expr env))))
 	(t expr)))
+
+(defun no-env (function)
+  (lambda (env &rest rest)
+	(declare (ignore env))
+	(apply function rest)))
 
 (defun eval-whole (sequence env)
   (let@ rec ((sequence sequence)

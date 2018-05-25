@@ -74,7 +74,7 @@
 
 
 (copy/assign! *core-1.0* (lex-semantic +core+ #x20) (make-instance 'eager-function :fun (lambda (x y) (/ x y))))
-(copy/assign! *core-1.0* (lex-semantic +core+ #x21) (make-instance 'lazy-function :fun #'signed-integer))
+(copy/assign! *core-1.0* (lex-semantic +core+ #x21) (make-instance 'lazy-function :fun (no-env #'signed-integer)))
 
 
 (define-condition unsupported-float (error)
@@ -89,4 +89,4 @@
 	  (8 (decode-float64 bits))
 	  (t (error 'unsupported-float :size (* 8 length))))))
 
-(copy/assign! *core-1.0* (lex-semantic +core+ #x22) (make-instance 'lazy-function :fun #'binary-float))
+(copy/assign! *core-1.0* (lex-semantic +core+ #x22) (make-instance 'lazy-function :fun (no-env #'binary-float)))
