@@ -24,7 +24,7 @@
 		   #:lex-encoding #:get-lex-encoding
 		   #:qref #:dref
 		   #:eager-function #:lazy-function #:impure-eager-function #:impure-lazy-function
-		   #:map-form #:qualify #:eval #:eval-whole))
+		   #:map-form #:qualify #:eval #:eval-whole #:with-eval))
 
 (in-package :bulk/eval)
 
@@ -205,3 +205,10 @@
 		(bind (((:values expr new-env) (eval (first sequence) env)))
 		  (rec (rest sequence) (if new-env new-env env) (if expr (cons expr yield) yield)))
 		(reverse yield))))
+
+(defmacro with-eval (env bindings &body body)
+  `(let (,@(mapcar (lambda (name) `(,name (eval ,name ,env)))
+				   (rest (assoc 'eval bindings)))
+		 ,@(mapcar (lambda (name) `(,name (qualify ,name ,env)))
+				   (rest (assoc 'qualify bindings))))
+	 ,@body))

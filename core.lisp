@@ -65,8 +65,8 @@
 
 
 (defun define (env ref value)
-  (let ((ref (qualify ref env))
-		(value (eval value env)))
+  (with-eval env ((qualify ref)
+				  (eval value))
 	(with-slots (ns name) ref
 	  (values value (copy/assign env (lex-value ns name) value)))))
 
