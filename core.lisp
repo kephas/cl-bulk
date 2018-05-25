@@ -15,9 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/core
-  (:use :cl :bulk/eval :bulk/stringenc)
+  (:use :cl :bulk/eval :bulk/stringenc :bulk/reference :bulk/words :ieee-floats)
   (:shadowing-import-from :bulk/eval #:eval)
-  (:export #:*core-1.0*))
+  (:export #:*core-1.0* #:unsupported-float))
 
 (in-package :bulk/core)
 
@@ -46,7 +46,7 @@
 				(#x12 "arg")
 				(#x13 "rest")
 				(#x20 "frac")
-				(#x21 "bigin")
+				(#x21 "bigint")
 				(#x22 "binary")
 				(#x23 "decimal")
 				(#x30 "prefix-bytecode")
@@ -62,3 +62,31 @@
 (copy/assign! *core-1.0* (lex-semantic +core+ #x3) *stringenc*)
 (copy/assign! *core-1.0* (lex-semantic +core+ #x4) *iana*)
 (copy/assign! *core-1.0* (lex-semantic +core+ #x5) *codepage*)
+
+
+(defun define (env ref value)
+  (let ((ref (qualify ref env))
+		(value (eval value env)))
+	(with-slots (ns name) ref
+	  (values value (copy/assign env (lex-value ns name) value)))))
+
+(copy/assign! *core-1.0* (lex-semantic +core+ #x9) (make-instance 'impure-lazy-function :fun #'define))
+
+
+(copy/assign! *core-1.0* (lex-semantic +core+ #x20) (make-instance 'eager-function :fun (lambda (x y) (/ x y))))
+(copy/assign! *core-1.0* (lex-semantic +core+ #x21) (make-instance 'lazy-function :fun #'signed-integer))
+
+
+(define-condition unsupported-float (error)
+  ((size :initarg :size)))
+
+(defun binary-float (bytes)
+  (let* ((%bytes (get-bytes bytes))
+		 (length (length %bytes))
+		 (bits (bytes->word %bytes)))
+	(case length
+	  (4 (decode-float32 bits))
+	  (8 (decode-float64 bits))
+	  (t (error 'unsupported-float :size (* 8 length))))))
+
+(copy/assign! *core-1.0* (lex-semantic +core+ #x22) (make-instance 'lazy-function :fun #'binary-float))

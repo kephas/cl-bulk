@@ -30,8 +30,8 @@
 	(rec (cons next expressions) (%read-bulk stream top-level?)))))
 
 (defun %read-array-payload (stream)
-  (let* ((size (read-bulk stream))
-	 (array (make-array size :element-type '(unsigned-byte 8))))
+  (let* ((size (unsigned-integer (read-bulk stream)))
+		 (array (make-array size :element-type '(unsigned-byte 8))))
     (read-sequence array stream)
     array))
 
@@ -40,7 +40,7 @@
 integer"
   (let ((bytes (make-array size)))
 	(read-sequence bytes stream)
-	(bytes->word bytes)))
+	(make-instance 'word :bytes bytes)))
 
 (defun %read-ref-payload (stream marker)
   (let* ((ns (if (eql #xFF marker)
@@ -69,11 +69,11 @@ integer"
       (6 (read-unsigned-word stream 4))
       (7 (read-unsigned-word stream 8))
       (8 (read-unsigned-word stream 16))
-      (9 (- (read-unsigned-word stream 1)))
-      (10 (- (read-unsigned-word stream 2)))
-      (11 (- (read-unsigned-word stream 4)))
-      (12 (- (read-unsigned-word stream 8)))
-      (13 (- (read-unsigned-word stream 16)))
+      (9 (- (unsigned-integer (read-unsigned-word stream 1))))
+      (10 (- (unsigned-integer (read-unsigned-word stream 2))))
+      (11 (- (unsigned-integer (read-unsigned-word stream 4))))
+      (12 (- (unsigned-integer (read-unsigned-word stream 8))))
+      (13 (- (unsigned-integer (read-unsigned-word stream 16))))
       ((14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31) (error 'parsing-error :pos (if-let (pos (file-position stream)) (1- pos))))
       (:end :end)
       (t (%read-ref-payload stream marker)))))

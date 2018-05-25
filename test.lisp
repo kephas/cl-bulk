@@ -22,12 +22,22 @@
 (in-package :bulk/test)
 
 
-(defparameter *primitives-bulk* #(1 0 3 4 12 72 101 108 108 111 32 119
-111 114 108 100 33 4 42 5 1 0 6 1 0 0 0 7 1 35 69 103 137 171 205 239
-9 128 2))
-(defparameter *primitives* '((:nil #(#x48 #x65 #x6C #x6C #x6F #x20
-#x77 #x6F #x72 #x6C #x64 #x21) #x2A #x100 #x1000000 #x123456789ABCDEF
-#x-80)))
+(defparameter *primitives* '((:nil #(0))
+							 (nil #(1 2))
+							 (#(1 2 3) #(3 4 3 1 2 3))
+							 (0 #(4 0))
+							 (#x0F #(4 #x0F))
+							 (#x0F1F #(5 #x0F #x1F))
+							 (#x1F2F3F #(6 0 #x1F #x2F #x3F))
+							 (#x0F1F2F3F #(6 #x0F #x1F #x2F #x3F))
+							 (#x0F1F2F3F4F5F6F7F #(7 #x0F #x1F #x2F #x3F #x4F #x5F #x6F #x7F))
+							 (#x0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFFF #(8 #x0F #x1F #x2F #x3F #x4F #x5F #x6F #x7F #x8F #x9F #xAF #xBF #xCF #xDF #xEF #xFF))
+							 (#x-0F #(9 #x0F))
+							 (#x-0F1F #(10 #x0F #x1F))
+							 (#x-1F2F3F #(11 0 #x1F #x2F #x3F))
+							 (#x-0F1F2F3F #(11 #x0F #x1F #x2F #x3F))
+							 (#x-0F1F2F3F4F5F6F7F #(12 #x0F #x1F #x2F #x3F #x4F #x5F #x6F #x7F))
+							 (#x-0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFFF #(13 #x0F #x1F #x2F #x3F #x4F #x5F #x6F #x7F #x8F #x9F #xAF #xBF #xCF #xDF #xEF #xFF))))
 
 (defparameter *nesting-bulk* #(0 1 2 1 1 2 1 2 2))
 (defparameter *nesting* '(:nil nil (nil nil)))
@@ -41,6 +51,14 @@
 (defun read-bulk-seq (seq)
   (with-input-from-sequence (in seq)
     (read-whole in :version '(1 0))))
+
+(defun resolve-words (yield)
+  (mapcar (lambda (obj)
+			(typecase obj
+			  (word (unsigned-integer obj))
+			  (list (resolve-words obj))
+			  (t obj)))
+		  yield))
 
 
 #| custom equality predicate |#
@@ -72,22 +90,24 @@
 (in-suite all)
 (defsuite* maths)
 
-(defparameter *specs-2c* '((-5 #xFB 1)(0 0 1)(0 0 4)(#x-80 #x80 1)(#x-7F #x81 1)(#x7F #x7F 1)(#x-7F #xFF81 2)))
+(defparameter *specs-2c* '((-5 (#xFB))(0 (0))(#x-80 (#x80))(#x-7F (#x81))(#x7F (#x7F))(#x-81 (#xFF #x7F))))
 
 (deftest make-2c ()
   (dolist (specs *specs-2c*)
-    (is (= (make-2c-notation (first specs) (third specs)) (second specs)))))
+    (is (egal? (word->bytes (first specs)) (second specs)))))
 
 (deftest parse-2c ()
   (dolist (specs *specs-2c*)
-    (is (= (parse-2c-notation (second specs) (third specs)) (first specs)))))
+    (is (egal? (signed-integer (make-instance 'word :bytes (second specs))) (first specs)))))
 
 
 (in-suite all)
 (defsuite* parsing)
 
 (deftest read-primitives ()
-  (is (egal? *primitives* (read-bulk-seq *primitives-bulk*))))
+  (dolist (spec *primitives*)
+	(is (egal? (first spec)
+			   (first (resolve-words (read-bulk-seq (second spec))))))))
 
 (deftest read-nesting ()
   (is (egal? *nesting* (read-bulk-seq *nesting-bulk*))))
@@ -99,8 +119,10 @@
 (defsuite* writing)
 
 (deftest write-primitives ()
-  (is (egal? *primitives-bulk* (with-output-to-sequence (out)
-				 (write-whole out *primitives*)))))
+  (dolist (spec *primitives*)
+	(is (egal? (second spec)
+			   (with-output-to-sequence (out)
+				 (write-bulk out (first spec)))))))
 
 (deftest write-nesting ()
   (is (egal? *nesting-bulk* (with-output-to-sequence (out)
@@ -136,6 +158,30 @@
 	(is (= 43 (get-value (get-lasting env) '(:value (:foo :bar) 34))))
 	(is (not (get-value (get-lasting env) '(:value (:foo :quux) 34))))))
 
+(deftest env-application ()
+  (let ((env1 (make-instance 'lexical-environment))
+		(env2 (make-instance 'lexical-environment)))
+	(copy/assign! env1 (lex-value '(:foo :bar) 0) 0)
+	(is (= 0 (get-value env1 (lex-value '(:foo :bar) 0))))
+	(copy/assign! env2 (lex-value '(:foo :bar) 0) 42)
+	(copy/assign! env2 (lex-value '(:foo :bar) 1) 1000)
+	(apply-env! env1 env2)
+	(is (= 42 (get-value env1 (lex-value '(:foo :bar) 0))))
+	(is (= 1000 (get-value env1 (lex-value '(:foo :bar) 1)))))
+  (let ((env1 (make-instance 'compound-lexical-environment :normal *core-1.0* :policy (policy/ns '(:foo :bar))))
+		(env2 (make-instance 'compound-lexical-environment :normal *core-1.0* :policy (policy/ns '(:foo :quux)))))
+	(copy/assign! env1 (lex-value '(:foo :bar) 0) 0)
+	(copy/assign! env1 (lex-value '(:foo :quux) 0) 1)
+	(is (= 0 (get-value env1 (lex-value '(:foo :bar) 0))))
+	(is (= 1 (get-value env1 (lex-value '(:foo :quux) 0))))
+	(copy/assign! env2 (lex-value '(:foo :bar) 0) 42)
+	(copy/assign! env2 (lex-value '(:foo :bar) 1) 1000)
+	(copy/assign! env2 (lex-value '(:foo :quux) 0) 1024)
+	(apply-env! env1 env2)
+	(is (= 42 (get-value env1 (lex-value '(:foo :bar) 0))))
+	(is (= 1000 (get-value env1 (lex-value '(:foo :bar) 1))))
+	(is (= 1024 (get-value env1 (lex-value '(:foo :quux) 0))))))
+
 (deftest eval-one ()
   (let ((env *core-1.0*))
 	(copy/assign! env (lex-ns 99) '(:foo :bar))
@@ -150,6 +196,20 @@
 	(is (egal? (eval (list (ref 99 5) (list (list (ref 99 4) 1 2)) (list 3)) env) (list 3 3)))
 	(is (egal? (eval (list (ref 99 6) (list (list (ref 99 4) 1 2)) (list 3)) env) (list (list (qref '(:foo :bar) 4) 1 2) 3)))))
 
+(deftest eval-many ()
+  (let ((env *core-1.0*))
+	(copy/assign! env (lex-ns 255) '(:foo :bar))
+	(copy/assign! env (lex-semantic '(:foo :bar) 0) (make-instance 'eager-function :fun #'+))
+	(is (egal? '(1 2 3 4 10) (eval-whole `((,(ref 32 9) ,(ref 255 10) 1)
+										   (,(ref 32 9) ,(ref 255 20) 2)
+										   (,(ref 32 9) ,(ref 255 30) 3)
+										   (,(ref 32 9) ,(ref 255 40) 4)
+										   (,(ref 255 0)
+											 (,(ref 255 0) ,(ref 255 10) ,(ref 255 20))
+											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
+
+(defsuite* core)
+
 (deftest stringenc ()
   (is (eq :iso-8859-15
 		 (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 4) 111)) *core-1.0*)))
@@ -163,3 +223,12 @@
   (is (eq :us-ascii
 		  (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 5) 20127)) *core-1.0*)))
 			(get-lex-encoding env)))))
+
+(defparameter *pies* '(3.141592653589793d0 3.1415927f0))
+(defparameter *pies-bulk* #(1 32 34 7 64 9 33 251 84 68 45 24 2 1 32 34 6 64 73 15 219 2))
+
+(deftest arithmetic ()
+  (is (= (/ 3 8) (eval (list (ref #x20 #x20) 3 8) *core-1.0*)))
+  (is (= -1 (eval (list (ref #x20 #x21) (word #xFF #xFF)) *core-1.0*)))
+  (is (egal? *pies-bulk* (with-output-to-sequence (out) (write-whole out *pies*))))
+  (is (egal? *pies* (eval-whole (read-bulk-seq *pies-bulk*) *core-1.0*))))

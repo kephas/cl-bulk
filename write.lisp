@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/write
-  (:use :cl :bulk/reference :bulk/words :scheme :trivial-utf-8)
+  (:use :cl :bulk/reference :bulk/words :scheme :trivial-utf-8 :ieee-floats)
   (:export #:write-bulk #:write-whole
 		   #:arbitrary-bytes
 		   #:create-bulk-file #:append-to-bulk-file
@@ -65,43 +65,45 @@
 					  (error () (error 'unimplemented-serialization)))))
 		 (write-bulk stream bytes)))))
 
+(defun %write-word (stream bytes &optional negative?)
+  (let* ((length (length bytes))
+		 (marker (cadr (assoc length '((1 4)(2 5)(4 6)(8 7)(16 8))))))
+	(if marker
+		(progn
+		  (write-byte (if negative? (+ 5 marker) marker) stream)
+		  (write-sequence bytes stream))
+		(write-bulk stream (coerce bytes 'vector)))))
 
-(defun %write-word (stream value size)
-  (write-sequence (word->bytes value :length size) stream))
+(defmethod write-bulk (stream (bulk word))
+  (%write-word stream (get-bytes bulk)))
 
 (defmethod write-bulk (stream (bulk integer))
   (typecase bulk
-    ((integer 0 #xFF)
-     (progn (write-byte 4 stream)
-			(%write-word stream bulk 1)))
-    ((integer 0 #xFFFF)
-     (progn (write-byte 5 stream)
-			(%write-word stream bulk 2)))
-    ((integer 0 #xFFFFFFFF)
-     (progn (write-byte 6 stream)
-			(%write-word stream bulk 4)))
-    ((integer 0 #xFFFFFFFFFFFFFFFF)
-     (progn (write-byte 7 stream)
-			(%write-word stream bulk 8)))
-    ((integer 0 #xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-     (progn (write-byte 8 stream)
-			(%write-word stream bulk 16)))
-    ((integer #x-FF 0)
-     (progn (write-byte 9 stream)
-			(%write-word stream (- bulk) 1)))
-    ((integer #x-FFFF 0)
-     (progn (write-byte 10 stream)
-			(%write-word stream (- bulk) 2)))
-    ((integer #x-FFFFFFFF 0)
-     (progn (write-byte 11 stream)
-			(%write-word stream (- bulk) 4)))
-    ((integer #x-FFFFFFFFFFFFFFFF 0)
-     (progn (write-byte 12 stream)
-			(%write-word stream (- bulk) 8)))
-    ((integer #x-FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 0)
-     (progn (write-byte 13 stream)
-			(%write-word stream (- bulk) 16)))
-    (t (error 'unimplemented-serialization))))
+    ((integer 0 #xFF) (%write-word stream (word->bytes bulk :length 1)))
+    ((integer 0 #xFFFF) (%write-word stream (word->bytes bulk :length 2)))
+    ((integer 0 #xFFFFFFFF) (%write-word stream (word->bytes bulk :length 4)))
+    ((integer 0 #xFFFFFFFFFFFFFFFF) (%write-word stream (word->bytes bulk :length 8)))
+    ((integer 0 #xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) (%write-word stream (word->bytes bulk :length 16)))
+    ((integer #x-FF 0) (%write-word stream (word->bytes (- bulk) :length 1) t))
+    ((integer #x-FFFF 0) (%write-word stream (word->bytes (- bulk) :length 2) t))
+    ((integer #x-FFFFFFFF 0) (%write-word stream (word->bytes (- bulk) :length 4) t))
+    ((integer #x-FFFFFFFFFFFFFFFF 0) (%write-word stream (word->bytes (- bulk) :length 8) t))
+    ((integer #x-FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 0) (%write-word stream (word->bytes (- bulk) :length 16) t))
+    (t (write-bulk stream
+				   (list (ref #x20 #x21) (coerce (word->bytes bulk :twoc t) '(vector (unsigned-byte 8))))))))
+
+(defmethod write-bulk (stream (bulk ratio))
+  (write-bulk stream (list (ref #x20 #x20) (numerator bulk) (denominator bulk))))
+
+(defmethod write-bulk (stream (bulk float))
+  (cond
+	((<= (float-precision bulk) 24)
+	 (write-bulk stream (list (ref #x20 #x22)
+							  (make-instance 'word :bytes (word->bytes (encode-float32 bulk) :length 4)))))
+	((<= (float-precision bulk) 53)
+	 (write-bulk stream (list (ref #x20 #x22)
+							  (make-instance 'word :bytes (word->bytes (encode-float64 bulk) :length 8)))))
+	(t (error 'unimplemented-serialization))))
 
 
 (defmethod write-bulk (stream (bulk ref))

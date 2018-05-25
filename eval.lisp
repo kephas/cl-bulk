@@ -15,16 +15,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/eval
-  (:use :cl :alexandria :metabang-bind :bulk/reference)
+  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words)
   (:shadow #:eval)
-  (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value
+  (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value #:apply-env!
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
 		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
 		   #:lex-encoding #:get-lex-encoding
 		   #:qref #:dref
 		   #:eager-function #:lazy-function #:impure-eager-function #:impure-lazy-function
-		   #:map-form #:qualify #:eval))
+		   #:map-form #:qualify #:eval #:eval-whole))
 
 (in-package :bulk/eval)
 
@@ -58,6 +58,15 @@
   (gethash field (slot-value env 'table)))
 
 
+(defgeneric apply-env! (target source)
+  (:documentation "Apply all assignments in SOURCE to TARGET."))
+
+(defmethod apply-env! (target (source lexical-environment))
+  (maphash (lambda (field value)
+			 (set-value target field value))
+		   (slot-value source 'table)))
+
+
 (defclass compound-lexical-environment ()
   ((normal-env :initarg :normal)
    (lasting-env :initform (make-instance 'lexical-environment) :initarg :lasting :reader get-lasting)
@@ -82,6 +91,11 @@
 				   :normal (copy-env normal-env)
 				   :lasting (copy-env lasting-env)
 				   :policy policy)))
+
+(defmethod apply-env! (target (source compound-lexical-environment))
+  (with-slots (normal-env lasting-env) source
+	(apply-env! target normal-env)
+	(apply-env! target lasting-env)))
 
 (defun policy/ns (ns)
   (lambda (field)
@@ -160,6 +174,7 @@
 					   expr)))
 	(dangling-ref expr)
 	(ref (eval (qualify expr env) env))
+	(word (unsigned-integer expr))
 	(list (cond
 			((null expr) nil)
 			((typep (first expr) 'ref)
@@ -181,3 +196,12 @@
 					 (map-form #'eval expr env)))))
 			(t (map-form #'eval expr env))))
 	(t expr)))
+
+(defun eval-whole (sequence env)
+  (let@ rec ((sequence sequence)
+			 (env env)
+			 (yield))
+	(if sequence
+		(bind (((:values expr new-env) (eval (first sequence) env)))
+		  (rec (rest sequence) (if new-env new-env env) (if expr (cons expr yield) yield)))
+		(reverse yield))))

@@ -16,7 +16,8 @@
 
 (uiop:define-package :bulk/words
   (:use :cl :scheme)
-  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes))
+  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes #:word* #:word #:get-bytes
+		   #:unsigned-integer #:signed-integer))
 
 (in-package :bulk/words)
 
@@ -40,11 +41,38 @@ notation"
   (let@ rec ((values nil) (count count))
 	(if (<= count 0) values (rec (cons value values) (1- count)))))
 
-(defun word->bytes (word &key (byte-size 8) length)
+(defun word->bytes (word &key (byte-size 8) length twoc)
   (let@ rec ((bytes nil)
 			 (word word))
 	(if (or (eql word 0) (eql word -1))
-		(if length
-			(last (append (repeat (if (zerop word) 0 255) (- length (length bytes))) bytes) length)
-			bytes)
+		(if bytes
+			(cond
+			  ((and (eql word -1) (not (logbitp 7 (first bytes))))
+			   (rec (cons 255 bytes) -1))
+			  ((and twoc (eql word 0) (logbitp 7 (first bytes)))
+			   (rec (cons 0 bytes) 0))
+			  (t (if length
+					 (last (append (repeat (if (zerop word) 0 255) (- length (length bytes))) bytes) length)
+					 bytes)))
+			(rec (if (zerop word) '(0) '(255)) word))
 		(rec (cons (ldb (byte byte-size 0) word) bytes) (ash word (- byte-size))))))
+
+
+(defclass word ()
+  ((bytes :initarg :bytes :reader get-bytes)))
+
+(defun word* (bytes)
+  (make-instance 'word :bytes bytes))
+
+(defun word (&rest bytes)
+  (word* bytes))
+
+(defmethod get-bytes ((object array)) object)
+
+
+(defun unsigned-integer (bytes)
+  (bytes->word (get-bytes bytes)))
+
+(defun signed-integer (bytes)
+  (let ((%bytes (get-bytes bytes)))
+	(parse-2c-notation (bytes->word %bytes) (length %bytes))))
