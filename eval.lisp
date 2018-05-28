@@ -84,9 +84,10 @@
 
 (defmethod add-namespace ((env lexical-environment) num (definition ns-definition))
   (with-slots (name bare-id (defs env)) definition
-	(setf (gethash bare-id (slot-value env 'bare-ids)) definition)
-	(apply-env! env defs)
-	(set-value env (lex-ns num) name)))
+	(push definition (gethash bare-id (slot-value env 'bare-ids)))
+	(when num
+	  (apply-env! env defs)
+	  (set-value env (lex-ns num) name))))
 
 (defun copy/add-namespace (env num definition)
   (copy/do (env)
