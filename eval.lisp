@@ -20,7 +20,7 @@
   (:export #:ns-definition #:name #:bare-id #:env
 		   #:lexical-environment #:copy/do
 		   #:copy/assign #:copy/assign! #:get-value #:apply-env!
-		   #:copy/add-namespace
+		   #:copy/add-namespace #:copy/add-namespace!
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
 		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
@@ -91,6 +91,9 @@
 (defun copy/add-namespace (env num definition)
   (copy/do (env)
 	(add-namespace env num definition)))
+
+(defmacro copy/add-namespace! (place num definition)
+  `(setf ,place (copy/add-namespace ,place ,num ,definition)))
 
 
 (defclass compound-lexical-environment ()
