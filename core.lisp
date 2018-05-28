@@ -95,6 +95,18 @@
 (copy/assign! *core-1.0* (lex-semantic +core+ #x9) (make-instance 'impure-lazy-function :fun #'define))
 
 
+(defun mnemonic/def (env ref mnemonic doc &optional value)
+  (declare (ignore doc))
+  (with-eval env ((string mnemonic)
+				  (eval value))
+	(with-slots (ns name) ref
+	  (let ((ns-name (get-value env (lex-ns ns))))
+		(copy/assign! env (lex-mnemonic ns-name name) mnemonic)
+		(if value (copy/assign! env (lex-value ns-name name) value))))))
+
+(copy/assign! *core-1.0* (lex-semantic +core+ #xA) (make-instance 'impure-lazy-function :fun #'mnemonic/def))
+
+
 (copy/assign! *core-1.0* (lex-semantic +core+ #x10) (make-instance 'eager-function :fun (lambda (vector1 vector2)
 																						  (make-instance 'bulk-array :env (slot-value vector1 'env)
 																										 :bytes (concatenate 'vector (get-bytes vector1) (get-bytes vector2))))))
