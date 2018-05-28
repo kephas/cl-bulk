@@ -77,8 +77,7 @@
 	(values nil (copy/add-namespace env num def))))
 
 (defun parse-ns (env num id-form)
-  (with-eval env ((eval num)
-				  (qualify id-form))
+  (with-eval env ((eval num))
 	(match id-form
 	  ((list (qualified-ref) _)
 	   (copy/add-by-ns-name env num (eval id-form env)))
@@ -89,8 +88,7 @@
 
 
 (defun define (env ref value)
-  (with-eval env ((qualify ref)
-				  (eval value))
+  (with-eval env ((eval value))
 	(with-slots (ns name) ref
 	  (values value (copy/assign env (lex-value ns name) value)))))
 

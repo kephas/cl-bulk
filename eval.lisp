@@ -300,8 +300,6 @@
 (defmacro with-eval (env bindings &body body)
   `(let (,@(mapcar (lambda (name) `(,name (eval ,name ,env)))
 				   (rest (assoc 'eval bindings)))
-		 ,@(mapcar (lambda (name) `(,name (qualify ,name ,env)))
-				   (rest (assoc 'qualify bindings)))
 		 ,@(mapcar (lambda (name) `(,name (to-string ,name)))
 				   (rest (assoc 'string bindings))))
 	 ,@body))
