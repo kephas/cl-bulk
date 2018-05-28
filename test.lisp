@@ -214,7 +214,15 @@
 											   (lex-value '(:foo "bar") 0)
 											   "quux")))
 		 (env (copy/add-namespace *core-1.0* 40 def)))
-	(is (equal "quux" (eval (ref 40 0) env)))))
+	(is (equal "quux" (eval (ref 40 0) env)))
+	(copy/assign! env (lex-semantic '(:foo "bar") 1) (make-instance 'eager-function :fun (lambda (x) (list :foo x))))
+	(copy/add-namespace! env nil (make-instance 'ns-definition :bare '(1 2) :name '(:foo (1 2))
+												:env (copy/assign (make-instance 'lexical-environment)
+																  (lex-value '(:foo (1 2)) 0)
+																  (make-instance 'eager-function :fun #'+))))
+	(is (equal '(3) (eval-whole (list (list (ref 32 6) 41 (list (ref 40 1) (list 1 2)))
+									  (list (ref 41 0) 1 2))
+								env)))))
 
 (defsuite* core)
 

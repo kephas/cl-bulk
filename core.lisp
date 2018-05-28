@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/core
-  (:use :cl :bulk/eval :bulk/stringenc :bulk/reference :bulk/words :ieee-floats)
+  (:use :cl :bulk/eval :bulk/stringenc :bulk/reference :bulk/words :ieee-floats :optima)
   (:shadowing-import-from :bulk/eval #:eval)
   (:export #:*core-1.0* #:unsupported-float))
 
@@ -62,6 +62,28 @@
 (copy/assign! *core-1.0* (lex-semantic +core+ #x3) *stringenc*)
 (copy/assign! *core-1.0* (lex-semantic +core+ #x4) *iana*)
 (copy/assign! *core-1.0* (lex-semantic +core+ #x5) *codepage*)
+
+
+(defun copy/add-by-full-name (env num full-name)
+  (match full-name
+	((list (type symbol) bare-id)
+	 (match (find-ns env bare-id :full-name full-name)
+	   ((and def (ns-definition))
+		(values nil (copy/add-namespace env num def)))
+	   (nil
+		(match (search-ns env bare-id :full-name full-name)
+		  ((and def (ns-definition))
+		   (values nil (copy/add-namespace env num def)))))))))
+
+(defun parse-ns (env num id-form)
+  (with-eval env ((eval num)
+				  (qualify id-form))
+	(match id-form
+	  ((list (qualified-ref) _)
+	   (copy/add-by-full-name env num (eval id-form env)))
+	  ((list (dangling-ref))))))
+
+(copy/assign! *core-1.0* (lex-semantic +core+ #x6) (make-instance 'impure-lazy-function :fun #'parse-ns))
 
 
 (defun define (env ref value)

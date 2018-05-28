@@ -21,11 +21,12 @@
 		   #:lexical-environment #:copy/do
 		   #:copy/assign #:copy/assign! #:get-value #:apply-env!
 		   #:copy/add-namespace #:copy/add-namespace!
+		   #:find-ns #:search-ns
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
 		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
 		   #:lex-encoding #:get-lex-encoding
-		   #:qref #:dref
+		   #:qualified-ref #:dangling-ref #:qref #:dref
 		   #:eager-function #:lazy-function #:impure-eager-function #:impure-lazy-function
 		   #:map-form #:qualify #:eval #:no-env #:eval-whole #:with-eval))
 
@@ -39,7 +40,8 @@
 
 (defclass lexical-environment ()
   ((table :initform (make-hash-table :test 'equal) :initarg :table)
-   (bare-ids :initform (make-hash-table :test 'equal) :initarg :bare-ids))
+   (bare-ids :initform (make-hash-table :test 'equal) :initarg :bare-ids)
+   (ns-search-functions :initform nil :initarg :search)))
 
 (defgeneric set-value (env field value)
   (:documentation "Set FIELD in ENV with new value VALUE"))
@@ -95,6 +97,30 @@
 
 (defmacro copy/add-namespace! (place num definition)
   `(setf ,place (copy/add-namespace ,place ,num ,definition)))
+
+
+(defun has-full-name? (name)
+  (lambda (def) (equal name (slot-value def 'name))))
+
+(defgeneric find-ns (env bare-id &key full-name)
+  (:documentation "Find a namespace among the already known namespaces, by the content of its unique identifier."))
+
+(defmethod find-ns ((env lexical-environment) bare-id &key full-name)
+  (if-let (found (gethash bare-id (slot-value env 'bare-ids)))
+	(if full-name
+		(find-if (has-full-name? full-name) found)
+		found)))
+
+(defgeneric search-ns (env bare-id &key full-name)
+  (:documentation "Search for a namespace by the content of its unique identifier"))
+
+(defmethod search-ns ((env lexical-environment) bare-id &key full-name)
+  (let@ rec ((functions (slot-value env 'ns-search-functions)))
+	(if-let (search-fn (first functions))
+	  (if-let (found (find-if (has-full-name? full-name)
+							  (funcall search-fn bare-id)))
+		found
+		(rec (rest functions))))))
 
 
 (defclass compound-lexical-environment ()
