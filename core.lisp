@@ -97,7 +97,9 @@
 (copy/assign! *core-1.0* (lex-semantic +core+ #x9) (make-instance 'impure-lazy-function :fun #'define))
 
 
-(copy/assign! *core-1.0* (lex-semantic +core+ #x10) (make-instance 'eager-function :fun (lambda (vector1 vector2) (concatenate 'vector vector1 vector2))))
+(copy/assign! *core-1.0* (lex-semantic +core+ #x10) (make-instance 'eager-function :fun (lambda (vector1 vector2)
+																						  (make-instance 'bulk-array :env (slot-value vector1 'env)
+																										 :bytes (concatenate 'vector (get-bytes vector1) (get-bytes vector2))))))
 
 
 (copy/assign! *core-1.0* (lex-semantic +core+ #x20) (make-instance 'eager-function :fun (lambda (x y) (/ x y))))

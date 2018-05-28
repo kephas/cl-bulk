@@ -261,4 +261,4 @@
   (is (egal? *pies* (eval-whole (read-bulk-seq *pies-bulk*) *core-1.0*))))
 
 (deftest concat ()
-  (is (equal '(8 9 10 11) (coerce (eval (first (read-bulk-seq #(1 32 16 3 4 2 8 9 3 4 2 10 11 2))) *core-1.0*) 'list))))
+  (is (equal '(8 9 10 11) (coerce (get-bytes (eval (first (read-bulk-seq #(1 32 16 3 4 2 8 9 3 4 2 10 11 2))) *core-1.0*)) 'list))))

@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/eval
-  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words)
+  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words :babel)
   (:shadow #:eval)
   (:export #:ns-definition #:name #:bare-id #:env
 		   #:lexical-environment #:copy/do
@@ -28,6 +28,7 @@
 		   #:lex-encoding #:get-lex-encoding
 		   #:qualified-ref #:dangling-ref #:qref #:dref
 		   #:eager-function #:lazy-function #:impure-eager-function #:impure-lazy-function
+		   #:bulk-array #:to-string
 		   #:map-form #:qualify #:eval #:no-env #:eval-whole #:with-eval))
 
 (in-package :bulk/eval)
@@ -225,6 +226,13 @@
 (defclass impure-lazy-function (lazy-function impure-function) ())
 
 
+(defclass bulk-array (word)
+  ((env :initarg :env)))
+
+(defun to-string (array)
+  (with-slots (bytes env) array
+	(babel:octets-to-string bytes :encoding (get-value env (lex-encoding)))))
+
 
 (defun map-form (function list env)
   (mapcar (lambda (obj) (funcall function obj env)) list))
@@ -232,6 +240,7 @@
 (defun qualify (expr env)
   (typecase expr
 	(qualified-ref expr)
+	(array (make-instance 'bulk-array :bytes expr :env env))
 	(ref (with-slots (ns name) expr
 		   (if-let (ns* (get-lex-ns env ns))
 			 (qref ns* name)
@@ -247,6 +256,7 @@
 					   expr)))
 	(dangling-ref expr)
 	(ref (eval (qualify expr env) env))
+	(array (qualify expr env))
 	(word (unsigned-integer expr))
 	(list (cond
 			((null expr) nil)
@@ -291,5 +301,7 @@
   `(let (,@(mapcar (lambda (name) `(,name (eval ,name ,env)))
 				   (rest (assoc 'eval bindings)))
 		 ,@(mapcar (lambda (name) `(,name (qualify ,name ,env)))
-				   (rest (assoc 'qualify bindings))))
+				   (rest (assoc 'qualify bindings)))
+		 ,@(mapcar (lambda (name) `(,name (to-string ,name)))
+				   (rest (assoc 'string bindings))))
 	 ,@body))
