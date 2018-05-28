@@ -17,7 +17,9 @@
 (uiop:define-package :bulk/eval
   (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words)
   (:shadow #:eval)
-  (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value #:apply-env!
+  (:export #:ns-definition #:name #:bare-id #:env
+		   #:lexical-environment #:copy/assign #:copy/assign! #:get-value #:apply-env!
+		   #:copy/add-namespace
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
 		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
@@ -29,8 +31,14 @@
 (in-package :bulk/eval)
 
 
+(defclass ns-definition ()
+  ((name :initarg :name)
+   (bare-id :initarg :bare)
+   (env :initarg :env)))
+
 (defclass lexical-environment ()
-  ((table :initform (make-hash-table :test 'equal) :initarg :table)))
+  ((table :initform (make-hash-table :test 'equal) :initarg :table)
+   (bare-ids :initform (make-hash-table :test 'equal) :initarg :bare-ids))
 
 (defgeneric set-value (env field value)
   (:documentation "Set FIELD in ENV with new value VALUE"))
@@ -65,6 +73,20 @@
   (maphash (lambda (field value)
 			 (set-value target field value))
 		   (slot-value source 'table)))
+
+
+(defgeneric add-namespace (env num definition))
+
+(defmethod add-namespace ((env lexical-environment) num (definition ns-definition))
+  (with-slots (name bare-id (defs env)) definition
+	(setf (gethash bare-id (slot-value env 'bare-ids)) definition)
+	(apply-env! env defs)
+	(set-value env (lex-ns num) name)))
+
+(defun copy/add-namespace (env num definition)
+  (let ((new-env (copy-env env)))
+	(add-namespace new-env num definition)
+	new-env))
 
 
 (defclass compound-lexical-environment ()

@@ -208,6 +208,14 @@
 											 (,(ref 255 0) ,(ref 255 10) ,(ref 255 20))
 											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
 
+(deftest namespaces ()
+  (let* ((def (make-instance 'ns-definition :name '(:foo "bar") :bare "bar"
+							 :env (copy/assign (make-instance 'lexical-environment)
+											   (lex-value '(:foo "bar") 0)
+											   "quux")))
+		 (env (copy/add-namespace *core-1.0* 40 def)))
+	(is (equal "quux" (eval (ref 40 0) env)))))
+
 (defsuite* core)
 
 (deftest stringenc ()
