@@ -18,7 +18,8 @@
   (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words)
   (:shadow #:eval)
   (:export #:ns-definition #:name #:bare-id #:env
-		   #:lexical-environment #:copy/assign #:copy/assign! #:get-value #:apply-env!
+		   #:lexical-environment #:copy/do
+		   #:copy/assign #:copy/assign! #:get-value #:apply-env!
 		   #:copy/add-namespace
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
 		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
@@ -52,10 +53,14 @@
 (defmethod copy-env ((env lexical-environment))
   (make-instance 'lexical-environment :table (copy-hash-table (slot-value env 'table))))
 
+(defmacro copy/do ((var &optional (env nil env?)) &body body)
+  `(let ((,var (copy-env ,(if env? env var))))
+	 ,@body
+	 ,var))
+
 (defun copy/assign (env field value)
-  (let ((new-env (copy-env env)))
-	(set-value new-env field value)
-	new-env))
+  (copy/do (env)
+	(set-value env field value)))
 
 (defmacro copy/assign! (place field value)
   `(setf ,place (copy/assign ,place ,field ,value)))
@@ -84,9 +89,8 @@
 	(set-value env (lex-ns num) name)))
 
 (defun copy/add-namespace (env num definition)
-  (let ((new-env (copy-env env)))
-	(add-namespace new-env num definition)
-	new-env))
+  (copy/do (env)
+	(add-namespace env num definition)))
 
 
 (defclass compound-lexical-environment ()
