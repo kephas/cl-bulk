@@ -99,28 +99,45 @@
   `(setf ,place (copy/add-namespace ,place ,num ,definition)))
 
 
-(defun has-full-name? (name)
-  (lambda (def) (equal name (slot-value def 'name))))
+(defun has-ns-name? (ns-name)
+  (lambda (def) (equal ns-name (slot-value def 'name))))
 
-(defgeneric find-ns (env bare-id &key full-name)
+(defun produces-good-id? (ref-name bare-id)
+  (lambda (def)
+	(with-slots (name (defs env)) def
+	  (copy/add-namespace! defs 40 def)
+	  (equal name (eval (list (ref 40 ref-name) bare-id) defs)))))
+
+(defun find-among-nss (nss bare-id ns-name ref-name all?)
+  (cond
+	(all?
+	 nss)
+	(ns-name
+	 (find-if (has-ns-name? ns-name) nss))
+	(ref-name
+	 (find-if (produces-good-id? ref-name bare-id) nss))
+	(t nil)))
+
+(defgeneric find-ns (env bare-id &key ns-name ref-name)
   (:documentation "Find a namespace among the already known namespaces, by the content of its unique identifier."))
 
-(defmethod find-ns ((env lexical-environment) bare-id &key full-name)
+(defmethod find-ns ((env lexical-environment) bare-id &key ns-name ref-name all?)
   (if-let (found (gethash bare-id (slot-value env 'bare-ids)))
-	(if full-name
-		(find-if (has-full-name? full-name) found)
-		found)))
+	(find-among-nss found bare-id ns-name ref-name all?)))
 
-(defgeneric search-ns (env bare-id &key full-name)
+(defgeneric search-ns (env bare-id &key ns-name)
   (:documentation "Search for a namespace by the content of its unique identifier"))
 
-(defmethod search-ns ((env lexical-environment) bare-id &key full-name)
-  (let@ rec ((functions (slot-value env 'ns-search-functions)))
+(defmethod search-ns ((env lexical-environment) bare-id &key ns-name ref-name all?)
+  (let@ rec ((functions (slot-value env 'ns-search-functions))
+			 (results))
 	(if-let (search-fn (first functions))
-	  (if-let (found (find-if (has-full-name? full-name)
-							  (funcall search-fn bare-id)))
-		found
-		(rec (rest functions))))))
+	  (if-let (found (find-among-nss (funcall search-fn bare-id) bare-id ns-name ref-name all?))
+		(if all?
+			(rec (rest functions) (append found results))
+			found)
+		(rec (rest functions) nil))
+	  results)))
 
 
 (defclass compound-lexical-environment ()
