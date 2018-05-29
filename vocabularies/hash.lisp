@@ -76,4 +76,4 @@ As a rule, each of these forms can contain `nil` as a first expression to denote
 		 (hash (word* (ironclad:digest-sequence (ironclad:make-digest :shake128 :output-length 8) content))))
 	(with-open-file (out path :element-type '(unsigned-byte 8) :direction :output :if-exists :supersede)
 	  (write-bulk out (list (ref #x20 #x0) 1 0))
-	  (write-bulk out (list (ref #x20 #xC) #x28 (list (ref #x28 #x22) hash) (arbitrary-bytes content))))))
+	  (write-bulk out (list (ref #x20 #xC) #x28 (list (ref #x28 #x21) hash) (arbitrary-bytes content))))))
