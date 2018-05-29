@@ -15,22 +15,34 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/eval
-  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words)
+  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words :babel)
   (:shadow #:eval)
-  (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value #:apply-env!
+  (:export #:ns-definition #:name #:bare-id #:env
+		   #:lexical-environment #:copy/do
+		   #:copy/assign #:copy/assign! #:get-value #:apply-env!
+		   #:copy/add-namespace #:copy/add-namespace!
+		   #:find-ns #:search-ns
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
 		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
 		   #:lex-encoding #:get-lex-encoding
-		   #:qref #:dref
+		   #:qualified-ref #:dangling-ref #:qref #:dref
 		   #:eager-function #:lazy-function #:impure-eager-function #:impure-lazy-function
-		   #:map-form #:qualify #:eval #:eval-whole))
+		   #:bulk-array #:to-string
+		   #:map-form #:qualify #:eval #:no-env #:eval-whole #:with-eval))
 
 (in-package :bulk/eval)
 
 
+(defclass ns-definition ()
+  ((name :initarg :name)
+   (bare-id :initarg :bare)
+   (env :initarg :env)))
+
 (defclass lexical-environment ()
-  ((table :initform (make-hash-table :test 'equal) :initarg :table)))
+  ((table :initform (make-hash-table :test 'equal) :initarg :table)
+   (bare-ids :initform (make-hash-table :test 'equal) :initarg :bare-ids)
+   (ns-search-functions :initform nil :initarg :search)))
 
 (defgeneric set-value (env field value)
   (:documentation "Set FIELD in ENV with new value VALUE"))
@@ -44,10 +56,14 @@
 (defmethod copy-env ((env lexical-environment))
   (make-instance 'lexical-environment :table (copy-hash-table (slot-value env 'table))))
 
+(defmacro copy/do ((var &optional (env nil env?)) &body body)
+  `(let ((,var (copy-env ,(if env? env var))))
+	 ,@body
+	 ,var))
+
 (defun copy/assign (env field value)
-  (let ((new-env (copy-env env)))
-	(set-value new-env field value)
-	new-env))
+  (copy/do (env)
+	(set-value env field value)))
 
 (defmacro copy/assign! (place field value)
   `(setf ,place (copy/assign ,place ,field ,value)))
@@ -65,6 +81,64 @@
   (maphash (lambda (field value)
 			 (set-value target field value))
 		   (slot-value source 'table)))
+
+
+(defgeneric add-namespace (env num definition))
+
+(defmethod add-namespace ((env lexical-environment) num (definition ns-definition))
+  (with-slots (name bare-id (defs env)) definition
+	(push definition (gethash bare-id (slot-value env 'bare-ids)))
+	(when num
+	  (apply-env! env defs)
+	  (set-value env (lex-ns num) name))))
+
+(defun copy/add-namespace (env num definition)
+  (copy/do (env)
+	(add-namespace env num definition)))
+
+(defmacro copy/add-namespace! (place num definition)
+  `(setf ,place (copy/add-namespace ,place ,num ,definition)))
+
+
+(defun has-ns-name? (ns-name)
+  (lambda (def) (equal ns-name (slot-value def 'name))))
+
+(defun produces-good-id? (ref-name bare-id)
+  (lambda (def)
+	(with-slots (name (defs env)) def
+	  (copy/add-namespace! defs 40 def)
+	  (equal name (eval (list (ref 40 ref-name) bare-id) defs)))))
+
+(defun find-among-nss (nss bare-id ns-name ref-name all?)
+  (cond
+	(all?
+	 nss)
+	(ns-name
+	 (find-if (has-ns-name? ns-name) nss))
+	(ref-name
+	 (find-if (produces-good-id? ref-name bare-id) nss))
+	(t nil)))
+
+(defgeneric find-ns (env bare-id &key ns-name ref-name)
+  (:documentation "Find a namespace among the already known namespaces, by the content of its unique identifier."))
+
+(defmethod find-ns ((env lexical-environment) bare-id &key ns-name ref-name all?)
+  (if-let (found (gethash bare-id (slot-value env 'bare-ids)))
+	(find-among-nss found bare-id ns-name ref-name all?)))
+
+(defgeneric search-ns (env bare-id &key ns-name)
+  (:documentation "Search for a namespace by the content of its unique identifier"))
+
+(defmethod search-ns ((env lexical-environment) bare-id &key ns-name ref-name all?)
+  (let@ rec ((functions (slot-value env 'ns-search-functions))
+			 (results))
+	(if-let (search-fn (first functions))
+	  (if-let (found (find-among-nss (funcall search-fn bare-id) bare-id ns-name ref-name all?))
+		(if all?
+			(rec (rest functions) (append found results))
+			found)
+		(rec (rest functions) nil))
+	  results)))
 
 
 (defclass compound-lexical-environment ()
@@ -152,6 +226,13 @@
 (defclass impure-lazy-function (lazy-function impure-function) ())
 
 
+(defclass bulk-array (word)
+  ((env :initarg :env)))
+
+(defun to-string (array)
+  (with-slots (bytes env) array
+	(babel:octets-to-string bytes :encoding (get-value env (lex-encoding)))))
+
 
 (defun map-form (function list env)
   (mapcar (lambda (obj) (funcall function obj env)) list))
@@ -159,6 +240,7 @@
 (defun qualify (expr env)
   (typecase expr
 	(qualified-ref expr)
+	(array (make-instance 'bulk-array :bytes expr :env env))
 	(ref (with-slots (ns name) expr
 		   (if-let (ns* (get-lex-ns env ns))
 			 (qref ns* name)
@@ -174,6 +256,7 @@
 					   expr)))
 	(dangling-ref expr)
 	(ref (eval (qualify expr env) env))
+	(array (qualify expr env))
 	(word (unsigned-integer expr))
 	(list (cond
 			((null expr) nil)
@@ -192,10 +275,18 @@
 						   (callable (slot-value function 'function)))
 					   (if (typep function 'impure-function)
 						   (apply callable env args)
-						   (apply callable args)))
+						   (values ; discard possible second value from pure lazy functions
+							(if (typep function 'lazy-function)
+								(apply callable env args) ; lazy function need to eval/qualify
+								(apply callable args)))))
 					 (map-form #'eval expr env)))))
 			(t (map-form #'eval expr env))))
 	(t expr)))
+
+(defun no-env (function)
+  (lambda (env &rest rest)
+	(declare (ignore env))
+	(apply function rest)))
 
 (defun eval-whole (sequence env)
   (let@ rec ((sequence sequence)
@@ -204,4 +295,11 @@
 	(if sequence
 		(bind (((:values expr new-env) (eval (first sequence) env)))
 		  (rec (rest sequence) (if new-env new-env env) (if expr (cons expr yield) yield)))
-		(reverse yield))))
+		(values (reverse yield) env))))
+
+(defmacro with-eval (env bindings &body body)
+  `(let (,@(mapcar (lambda (name) `(,name (eval ,name ,env)))
+				   (rest (assoc 'eval bindings)))
+		 ,@(mapcar (lambda (name) `(,name (to-string ,name)))
+				   (rest (assoc 'string bindings))))
+	 ,@body))

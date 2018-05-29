@@ -188,7 +188,7 @@
 	(copy/assign! env (lex-value '(:foo :bar) 3) "quux")
 	(copy/assign! env (lex-semantic '(:foo :bar) 4) (make-instance 'eager-function :fun #'+))
 	(copy/assign! env (lex-semantic '(:foo :bar) 5) (make-instance 'eager-function :fun #'append))
-	(copy/assign! env (lex-semantic '(:foo :bar) 6) (make-instance 'lazy-function :fun #'append))
+	(copy/assign! env (lex-semantic '(:foo :bar) 6) (make-instance 'lazy-function :fun (no-env #'append)))
 	(is (egal? (dref 42 0) (eval (ref 42 0) env)))
 	(is (egal? (qref '(:std :core) 2) (eval (ref 32 2) env)))
 	(is (egal? "quux" (eval (ref 99 3) env)))
@@ -207,6 +207,33 @@
 										   (,(ref 255 0)
 											 (,(ref 255 0) ,(ref 255 10) ,(ref 255 20))
 											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
+
+(deftest namespaces ()
+  (let* ((def (make-instance 'ns-definition :name '(:foo "bar") :bare "bar"
+							 :env (copy/assign (make-instance 'lexical-environment)
+											   (lex-value '(:foo "bar") 0)
+											   "quux")))
+		 (env (copy/add-namespace *core-1.0* 40 def)))
+	(is (equal "quux" (eval (ref 40 0) env)))
+	(copy/assign! env (lex-semantic '(:foo "bar") 1) (make-instance 'eager-function :fun (lambda (x) (list :foo x))))
+	(copy/add-namespace! env nil (make-instance 'ns-definition :bare '(1 2) :name '(:foo (1 2))
+												:env (copy/assign (make-instance 'lexical-environment)
+																  (lex-value '(:foo (1 2)) 0)
+																  (make-instance 'eager-function :fun #'+))))
+	(is (equal '(3) (eval-whole (list (list (ref 32 6) 41 (list (ref 40 1) (list 1 2)))
+									  (list (ref 41 0) 1 2))
+								env)))
+	(copy/add-namespace! env nil (make-instance 'ns-definition :bare '(4 2) :name '(:baz (4 2))
+												:env (copy/assign
+													  (copy/assign
+													   (make-instance 'lexical-environment)
+													   (lex-value '(:baz (4 2)) 0)
+													   (make-instance 'eager-function :fun #'*))
+													  (lex-semantic '(:baz (4 2)) 1)
+													  (make-instance 'eager-function :fun (lambda (x) (list :baz x))))))
+	(is (equal '(8) (eval-whole (list (list (ref 32 6) 42 (list (ref 42 1) (list 4 2)))
+									  (list (ref 42 0) 2 4))
+								env)))))
 
 (defsuite* core)
 
@@ -232,3 +259,6 @@
   (is (= -1 (eval (list (ref #x20 #x21) (word #xFF #xFF)) *core-1.0*)))
   (is (egal? *pies-bulk* (with-output-to-sequence (out) (write-whole out *pies*))))
   (is (egal? *pies* (eval-whole (read-bulk-seq *pies-bulk*) *core-1.0*))))
+
+(deftest concat ()
+  (is (equal '(8 9 10 11) (coerce (get-bytes (eval (first (read-bulk-seq #(1 32 16 3 4 2 8 9 3 4 2 10 11 2))) *core-1.0*)) 'list))))
