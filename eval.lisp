@@ -295,7 +295,7 @@
 	(if sequence
 		(bind (((:values expr new-env) (eval (first sequence) env)))
 		  (rec (rest sequence) (if new-env new-env env) (if expr (cons expr yield) yield)))
-		(reverse yield))))
+		(values (reverse yield) env))))
 
 (defmacro with-eval (env bindings &body body)
   `(let (,@(mapcar (lambda (name) `(,name (eval ,name ,env)))
