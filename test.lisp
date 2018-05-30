@@ -209,28 +209,28 @@
 											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
 
 (deftest namespaces ()
-  (let* ((def (make-instance 'ns-definition :name '(:foo "bar") :bare "bar"
+  (let* ((def (make-instance 'ns-definition :full '(:foo "bar") :bare "bar"
 							 :env (copy/assign (make-instance 'lexical-environment)
 											   (lex-value '(:foo "bar") 0)
 											   "quux")))
-		 (env (copy/add-namespace *core-1.0* 40 def)))
+		 (env (copy/add-definition *core-1.0* def :num 40)))
 	(is (equal "quux" (eval (ref 40 0) env)))
 	(copy/assign! env (lex-semantic '(:foo "bar") 1) (make-instance 'eager-function :fun (lambda (x) (list :foo x))))
-	(copy/add-namespace! env nil (make-instance 'ns-definition :bare '(1 2) :name '(:foo (1 2))
-												:env (copy/assign (make-instance 'lexical-environment)
-																  (lex-value '(:foo (1 2)) 0)
-																  (make-instance 'eager-function :fun #'+))))
+	(copy/add-definition! env (make-instance 'ns-definition :bare '(1 2) :full '(:foo (1 2))
+											 :env (copy/assign (make-instance 'lexical-environment)
+															   (lex-value '(:foo (1 2)) 0)
+															   (make-instance 'eager-function :fun #'+))))
 	(is (equal '(3) (eval-whole (list (list (ref 32 6) 41 (list (ref 40 1) (list 1 2)))
 									  (list (ref 41 0) 1 2))
 								env)))
-	(copy/add-namespace! env nil (make-instance 'ns-definition :bare '(4 2) :name '(:baz (4 2))
-												:env (copy/assign
-													  (copy/assign
-													   (make-instance 'lexical-environment)
-													   (lex-value '(:baz (4 2)) 0)
-													   (make-instance 'eager-function :fun #'*))
-													  (lex-semantic '(:baz (4 2)) 1)
-													  (make-instance 'eager-function :fun (lambda (x) (list :baz x))))))
+	(copy/add-definition! env (make-instance 'ns-definition :bare '(4 2) :full '(:baz (4 2))
+											 :env (copy/assign
+												   (copy/assign
+													(make-instance 'lexical-environment)
+													(lex-value '(:baz (4 2)) 0)
+													(make-instance 'eager-function :fun #'*))
+												   (lex-semantic '(:baz (4 2)) 1)
+												   (make-instance 'eager-function :fun (lambda (x) (list :baz x))))))
 	(is (equal '(8) (eval-whole (list (list (ref 32 6) 42 (list (ref 42 1) (list 4 2)))
 									  (list (ref 42 0) 2 4))
 								env)))))

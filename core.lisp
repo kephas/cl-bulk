@@ -64,23 +64,23 @@
 (copy/assign! *core-1.0* (lex-semantic +core+ #x5) *codepage*)
 
 
-(defun copy/add-by-ns-name (env num ns-name)
-  (match ns-name
+(defun copy/add-by-full-id (env num count full-id)
+  (match full-id
 	((list (type symbol) bare-id)
-	 (if-let (def (or (find-ns env bare-id :ns-name ns-name)
-					  (search-ns env bare-id :ns-name ns-name)))
-	   (values nil (copy/add-namespace env num def))))))
+	 (if-let (def (or (find-definition env bare-id :full-id full-id)
+					  (search-definition env bare-id :full-id full-id)))
+	   (values nil (copy/add-definition env def :num num :count count))))))
 
 (defun copy/add-self-describing (env num ref-name bare-id)
-  (if-let (def (or (find-ns env bare-id :ref-name ref-name)
-				   (search-ns env bare-id :ref-name ref-name)))
-	(values nil (copy/add-namespace env num def))))
+  (if-let (def (or (find-definition env bare-id :ref-name ref-name)
+				   (search-definition env bare-id :ref-name ref-name)))
+	(values nil (copy/add-definition env def :num num))))
 
 (defun parse-ns (env num id-form)
   (with-eval env ((eval num))
 	(match id-form
 	  ((list (qualified-ref) _)
-	   (copy/add-by-ns-name env num (eval id-form env)))
+	   (copy/add-by-full-id env num nil (eval id-form env)))
 	  ((list (dangling-ref (ns num) (name ref-name)) bare-id) (copy/add-self-describing env num ref-name bare-id))
 	  ((list (dangling-ref))))))
 
