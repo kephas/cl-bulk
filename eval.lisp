@@ -17,11 +17,11 @@
 (uiop:define-package :bulk/eval
   (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words :babel)
   (:shadow #:eval)
-  (:export #:ns-definition #:name #:bare-id #:env
+  (:export #:definition #:ns-definition #:pkg-definition #:full-id #:bare-id #:env #:children
 		   #:lexical-environment #:copy/do
 		   #:copy/assign #:copy/assign! #:get-value #:apply-env!
-		   #:copy/add-namespace #:copy/add-namespace!
-		   #:find-ns #:search-ns
+		   #:copy/add-definition #:copy/add-definition!
+		   #:find-definition #:search-definition
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
 		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
@@ -34,10 +34,12 @@
 (in-package :bulk/eval)
 
 
-(defclass ns-definition ()
-  ((name :initarg :name)
-   (bare-id :initarg :bare)
-   (env :initarg :env)))
+(defclass definition ()
+  ((full-id :initarg :full)
+   (bare-id :initarg :bare)))
+
+(defclass ns-definition (definition)
+   ((env :initarg :env)))
 
 (defclass lexical-environment ()
   ((table :initform (make-hash-table :test 'equal) :initarg :table)
@@ -83,57 +85,60 @@
 		   (slot-value source 'table)))
 
 
-(defgeneric add-namespace (env num definition))
+(defgeneric add-definition (env definition &key num count))
 
-(defmethod add-namespace ((env lexical-environment) num (definition ns-definition))
-  (with-slots (name bare-id (defs env)) definition
+(defmethod add-definition ((env lexical-environment) (definition ns-definition) &key num count)
+  (declare (ignore count))
+  (with-slots (full-id bare-id (defs env)) definition
 	(push definition (gethash bare-id (slot-value env 'bare-ids)))
 	(when num
 	  (apply-env! env defs)
-	  (set-value env (lex-ns num) name))))
+	  (set-value env (lex-ns num) full-id))))
 
-(defun copy/add-namespace (env num definition)
+(defun copy/add-definition (env definition &rest rest)
   (copy/do (env)
-	(add-namespace env num definition)))
+	(apply #'add-definition env definition rest)))
 
-(defmacro copy/add-namespace! (place num definition)
-  `(setf ,place (copy/add-namespace ,place ,num ,definition)))
+(defmacro copy/add-definition! (place definition &rest rest)
+  `(setf ,place (copy/add-definition ,place ,definition ,@rest)))
 
 
-(defun has-ns-name? (ns-name)
-  (lambda (def) (equal ns-name (slot-value def 'name))))
+(defun has-full-id? (full-id)
+  (lambda (def)
+	(equal full-id (slot-value def 'full-id))))
 
 (defun produces-good-id? (ref-name bare-id)
   (lambda (def)
-	(with-slots (name (defs env)) def
-	  (copy/add-namespace! defs 40 def)
-	  (equal name (eval (list (ref 40 ref-name) bare-id) defs)))))
+	(and (typep def 'ns-definition)
+		 (with-slots (full-id env) def
+		   (copy/add-definition! env def :num 40)
+		   (equal full-id (eval (list (ref 40 ref-name) bare-id) env))))))
 
-(defun find-among-nss (nss bare-id ns-name ref-name all?)
+(defun find-among-defs (defs bare-id full-id ref-name all?)
   (cond
 	(all?
-	 nss)
-	(ns-name
-	 (find-if (has-ns-name? ns-name) nss))
+	 defs)
+	(full-id
+	 (find-if (has-full-id? full-id) defs))
 	(ref-name
-	 (find-if (produces-good-id? ref-name bare-id) nss))
+	 (find-if (produces-good-id? ref-name bare-id) defs))
 	(t nil)))
 
-(defgeneric find-ns (env bare-id &key ns-name ref-name)
+(defgeneric find-definition (env bare-id &key full-id ref-name)
   (:documentation "Find a namespace among the already known namespaces, by the content of its unique identifier."))
 
-(defmethod find-ns ((env lexical-environment) bare-id &key ns-name ref-name all?)
+(defmethod find-definition ((env lexical-environment) bare-id &key full-id ref-name all?)
   (if-let (found (gethash bare-id (slot-value env 'bare-ids)))
-	(find-among-nss found bare-id ns-name ref-name all?)))
+	(find-among-defs found bare-id full-id ref-name all?)))
 
-(defgeneric search-ns (env bare-id &key ns-name)
+(defgeneric search-definition (env bare-id &key full-id)
   (:documentation "Search for a namespace by the content of its unique identifier"))
 
-(defmethod search-ns ((env lexical-environment) bare-id &key ns-name ref-name all?)
+(defmethod search-definition ((env lexical-environment) bare-id &key full-id ref-name all?)
   (let@ rec ((functions (slot-value env 'ns-search-functions))
 			 (results))
 	(if-let (search-fn (first functions))
-	  (if-let (found (find-among-nss (funcall search-fn bare-id) bare-id ns-name ref-name all?))
+	  (if-let (found (find-among-defs (funcall search-fn bare-id) bare-id full-id ref-name all?))
 		(if all?
 			(rec (rest functions) (append found results))
 			found)

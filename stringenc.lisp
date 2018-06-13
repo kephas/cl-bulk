@@ -17,7 +17,7 @@
 (uiop:define-package :bulk/stringenc
   (:use :cl :bulk/eval)
   (:shadowing-import-from :bulk/eval #:eval)
-  (:export #:*stringenc* #:*iana* #:*codepage*))
+  (:export #:stringenc #:iana-charset-mib->babel-name #:windows-code-page->babel-name))
 
 (in-package :bulk/stringenc)
 
@@ -80,7 +80,3 @@
 	(28605 :iso-8859-15)
 	(51932 :eucjp)
 	(65001 :utf-8)))
-
-(defvar *stringenc* (make-instance 'impure-eager-function :fun #'stringenc))
-(defvar *iana* (make-instance 'eager-function :fun #'iana-charset-mib->babel-name))
-(defvar *codepage* (make-instance 'eager-function :fun #'windows-code-page->babel-name))
