@@ -17,7 +17,7 @@
 (uiop:define-package :bulk/eval/helpers
   (:use :cl :scheme :alexandria :bulk/eval :bulk/reference)
   (:shadowing-import-from #:bulk/eval #:eval)
-  (:export #:no-env #:fun->eager #:fun->lazy
+  (:export #:no-env #:fun->eager #:fun->eager* #:fun->lazy #:fun->lazy*
 		   #:{eager} #:{eager*} #:{lazy} #:{lazy*}
 		   #:set-ns! #:make-ns #:name))
 
@@ -32,8 +32,14 @@
 (defun fun->eager (function)
   (make-instance 'eager-function :fun function))
 
+(defun fun->eager* (function)
+  (make-instance 'impure-eager-function :fun function))
+
 (defun fun->lazy (function)
   (make-instance 'lazy-function :fun (no-env function)))
+
+(defun fun->lazy* (function)
+  (make-instance 'impure-lazy-function :fun function))
 
 
 (defmacro make-function-maker (name class)

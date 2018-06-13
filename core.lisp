@@ -15,53 +15,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/core
-  (:use :cl :alexandria :bulk/eval :bulk/stringenc :bulk/reference :bulk/words :ieee-floats :optima)
+  (:use :cl :alexandria :bulk/eval :bulk/stringenc :bulk/reference :bulk/words :bulk/eval/helpers :ieee-floats :optima)
   (:shadowing-import-from :bulk/eval #:eval)
   (:export #:*core-1.0* #:unsupported-float))
 
 (in-package :bulk/core)
 
 (defvar *core-1.0* (make-instance 'lexical-environment))
-(eval-when (:compile-toplevel)
-  (defconstant +core+ '(:std :core)))
-
-(copy/assign! *core-1.0* '(:marker #x20) +core+)
-(copy/assign! *core-1.0* `(:mnemonic ,+core+) "bulk")
-
-(dolist (pair '((#x0 "version")
-				(#x1 "true")
-				(#x2 "false")
-				(#x3 "stringenc")
-				(#x4 "iana-charset")
-				(#x5 "codepage")
-				(#x6 "ns")
-				(#x7 "package")
-				(#x8 "import")
-				(#x9 "define")
-				(#xA "mnemonic/def")
-				(#xB "ns-mnemonic")
-				(#xC "verifiable-ns")
-				(#x10 "concat")
-				(#x11 "subst")
-				(#x12 "arg")
-				(#x13 "rest")
-				(#x20 "frac")
-				(#x21 "bigint")
-				(#x22 "binary")
-				(#x23 "decimal")
-				(#x30 "prefix-bytecode")
-				(#x31 "prefix-bytecode*")
-				(#x32 "postfix-bytecode")
-				(#x33 "postfix-bytecode*")
-				(#x34 "arity")
-				(#x35 "property-list")))
-  (copy/assign! *core-1.0* `(:mnemonic ,+core+ ,(first pair)) (second pair)))
-
 (copy/assign! *core-1.0* '(:encoding) :utf-8)
-
-(copy/assign! *core-1.0* (lex-semantic +core+ #x3) *stringenc*)
-(copy/assign! *core-1.0* (lex-semantic +core+ #x4) *iana*)
-(copy/assign! *core-1.0* (lex-semantic +core+ #x5) *codepage*)
 
 
 (defun copy/add-by-full-id (env num count full-id)
@@ -84,16 +45,11 @@
 	  ((list (dangling-ref (ns num) (name ref-name)) bare-id) (copy/add-self-describing env num ref-name bare-id))
 	  ((list (dangling-ref))))))
 
-(copy/assign! *core-1.0* (lex-semantic +core+ #x6) (make-instance 'impure-lazy-function :fun #'parse-ns))
-
 
 (defun define (env ref value)
   (with-eval env ((eval value))
 	(with-slots (ns name) ref
 	  (values value (copy/assign env (lex-value ns name) value)))))
-
-(copy/assign! *core-1.0* (lex-semantic +core+ #x9) (make-instance 'impure-lazy-function :fun #'define))
-
 
 (defun mnemonic/def (env ref mnemonic doc &optional value)
   (declare (ignore doc))
@@ -103,17 +59,6 @@
 	  (let ((ns-name (get-value env (lex-ns ns))))
 		(copy/assign! env (lex-mnemonic ns-name name) mnemonic)
 		(if value (copy/assign! env (lex-value ns-name name) value))))))
-
-(copy/assign! *core-1.0* (lex-semantic +core+ #xA) (make-instance 'impure-lazy-function :fun #'mnemonic/def))
-
-
-(copy/assign! *core-1.0* (lex-semantic +core+ #x10) (make-instance 'eager-function :fun (lambda (vector1 vector2)
-																						  (make-instance 'bulk-array :env (slot-value vector1 'env)
-																										 :bytes (concatenate 'vector (get-bytes vector1) (get-bytes vector2))))))
-
-
-(copy/assign! *core-1.0* (lex-semantic +core+ #x20) (make-instance 'eager-function :fun (lambda (x y) (/ x y))))
-(copy/assign! *core-1.0* (lex-semantic +core+ #x21) (make-instance 'lazy-function :fun (no-env #'signed-integer)))
 
 
 (define-condition unsupported-float (error)
@@ -128,4 +73,37 @@
 	  (8 (decode-float64 bits))
 	  (t (error 'unsupported-float :size (* 8 length))))))
 
-(copy/assign! *core-1.0* (lex-semantic +core+ #x22) (make-instance 'lazy-function :fun (no-env #'binary-float)))
+
+(copy/add-definition! *core-1.0*
+					  (make-ns '(:std :core)
+						(name nil :mnemonic "bulk")
+						(name #x0 :mnemonic "version")
+						(name #x1 :mnemonic "true")
+						(name #x2 :mnemonic "false")
+						(name #x3 :mnemonic "stringenc" :semantic (fun->eager* #'stringenc))
+						(name #x4 :mnemonic "iana-charset" :semantic (fun->eager #'iana-charset-mib->babel-name))
+						(name #x5 :mnemonic "codepage" :semantic (fun->eager #'windows-code-page->babel-name))
+						(name #x6 :mnemonic "ns" :semantic (fun->lazy* #'parse-ns))
+						(name #x7 :mnemonic "package")
+						(name #x8 :mnemonic "import")
+						(name #x9 :mnemonic "define" :semantic (fun->lazy* #'define))
+						(name #xA :mnemonic "mnemonic/def"  :semantic (fun->lazy* #'mnemonic/def))
+						(name #xB :mnemonic "ns-mnemonic")
+						(name #xC :mnemonic "verifiable-ns")
+						(name #x10 :mnemonic "concat" :semantic ({eager} (vector1 vector2)
+																  (make-instance 'bulk-array :env (slot-value vector1 'env)
+																				 :bytes (concatenate 'vector (get-bytes vector1) (get-bytes vector2)))))
+						(name #x11 :mnemonic "subst")
+						(name #x12 :mnemonic "arg")
+						(name #x13 :mnemonic "rest")
+						(name #x20 :mnemonic "frac" :semantic ({eager}  (x y) (/ x y)))
+						(name #x21 :mnemonic "bigint" :semantic (fun->lazy #'signed-integer))
+						(name #x22 :mnemonic "binary" :semantic (fun->lazy #'binary-float))
+						(name #x23 :mnemonic "decimal")
+						(name #x30 :mnemonic "prefix-bytecode")
+						(name #x31 :mnemonic "prefix-bytecode*")
+						(name #x32 :mnemonic "postfix-bytecode")
+						(name #x33 :mnemonic "postfix-bytecode*")
+						(name #x34 :mnemonic "arity")
+						(name #x35 :mnemonic "property-list"))
+					  :num #x20)
