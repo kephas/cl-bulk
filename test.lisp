@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (defpackage :bulk/test
-  (:use :cl :hu.dwim.stefil :metabang-bind :bulk/read :bulk/write :bulk/words :bulk/eval :bulk/core :scheme :flexi-streams)
+  (:use :cl :hu.dwim.stefil :metabang-bind :bulk/read :bulk/write :bulk/words :bulk/eval :bulk/eval/helpers :bulk/core :scheme :flexi-streams)
   (:shadowing-import-from :bulk/eval #:eval)
   (:export #:all #:maths #:parsing #:writing #:evaluation))
 
@@ -186,9 +186,9 @@
   (let ((env *core-1.0*))
 	(copy/assign! env (lex-ns 99) '(:foo :bar))
 	(copy/assign! env (lex-value '(:foo :bar) 3) "quux")
-	(copy/assign! env (lex-semantic '(:foo :bar) 4) (make-instance 'eager-function :fun #'+))
-	(copy/assign! env (lex-semantic '(:foo :bar) 5) (make-instance 'eager-function :fun #'append))
-	(copy/assign! env (lex-semantic '(:foo :bar) 6) (make-instance 'lazy-function :fun #'append))
+	(copy/assign! env (lex-semantic '(:foo :bar) 4) (fun->eager #'+))
+	(copy/assign! env (lex-semantic '(:foo :bar) 5) (fun->eager #'append))
+	(copy/assign! env (lex-semantic '(:foo :bar) 6) (fun->lazy #'append))
 	(is (egal? (dref 42 0) (eval (ref 42 0) env)))
 	(is (egal? (qref '(:std :core) 2) (eval (ref 32 2) env)))
 	(is (egal? "quux" (eval (ref 99 3) env)))
@@ -199,7 +199,7 @@
 (deftest eval-many ()
   (let ((env *core-1.0*))
 	(copy/assign! env (lex-ns 255) '(:foo :bar))
-	(copy/assign! env (lex-semantic '(:foo :bar) 0) (make-instance 'eager-function :fun #'+))
+	(copy/assign! env (lex-semantic '(:foo :bar) 0) (fun->eager #'+))
 	(is (egal? '(1 2 3 4 10) (eval-whole `((,(ref 32 9) ,(ref 255 10) 1)
 										   (,(ref 32 9) ,(ref 255 20) 2)
 										   (,(ref 32 9) ,(ref 255 30) 3)
@@ -207,6 +207,25 @@
 										   (,(ref 255 0)
 											 (,(ref 255 0) ,(ref 255 10) ,(ref 255 20))
 											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
+
+(deftest namespaces ()
+  (let* ((env (copy/add-definition *core-1.0*
+								   (make-ns '(:foo "bar")
+									 (name 0 :value "quux"))
+								   :num 40)))
+	(is (equal "quux" (eval (ref 40 0) env)))
+	(copy/assign! env (lex-semantic '(:foo "bar") 1) ({eager} (x) (list :foo x)))
+	(copy/add-definition! env (make-ns '(:foo (1 2))
+								(name 0 :value (fun->eager #'+))))
+	(is (equal '(3) (eval-whole (list (list (ref 32 6) 41 (list (ref 40 1) (list 1 2)))
+									  (list (ref 41 0) 1 2))
+								env)))
+	(copy/add-definition! env (make-ns '(:baz (4 2))
+								(name 0 :value (fun->eager #'*))
+								(name 1 :value ({eager} (x) (list :baz x)))))
+	(is (equal '(8) (eval-whole (list (list (ref 32 6) 42 (list (ref 42 1) (list 4 2)))
+									  (list (ref 42 0) 2 4))
+								env)))))
 
 (defsuite* core)
 
@@ -232,3 +251,6 @@
   (is (= -1 (eval (list (ref #x20 #x21) (word #xFF #xFF)) *core-1.0*)))
   (is (egal? *pies-bulk* (with-output-to-sequence (out) (write-whole out *pies*))))
   (is (egal? *pies* (eval-whole (read-bulk-seq *pies-bulk*) *core-1.0*))))
+
+(deftest concat ()
+  (is (equal '(8 9 10 11) (coerce (get-bytes (eval (first (read-bulk-seq #(1 32 16 3 4 2 8 9 3 4 2 10 11 2))) *core-1.0*)) 'list))))

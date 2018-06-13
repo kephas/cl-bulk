@@ -99,7 +99,7 @@ integer"
 				 (typep (first first-form) 'ref)
 				 (with-slots (ns name) (first first-form)
 				   (and (eql #x20 ns) (eql 0 name))))
-			(let ((version (rest first-form)))
+			(let ((version (mapcar #'unsigned-integer (rest first-form))))
 			  (if (equal '(1 0) version)
 				  (cons first-form (%read-form-payload stream t))
 				  (error 'unsupported-bulk-version :version version)))

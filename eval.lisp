@@ -15,22 +15,36 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/eval
-  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words)
+  (:use :cl :scheme :alexandria :metabang-bind :bulk/reference :bulk/words :babel)
   (:shadow #:eval)
-  (:export #:lexical-environment #:copy/assign #:copy/assign! #:get-value #:apply-env!
+  (:export #:definition #:ns-definition #:pkg-definition #:full-id #:bare-id #:env #:children
+		   #:lexical-environment #:copy/do
+		   #:copy/assign #:copy/assign! #:get-value #:apply-env!
+		   #:copy/add-definition #:copy/add-definition!
+		   #:find-definition #:search-definition
 		   #:compound-lexical-environment #:policy/ns #:get-lasting
 		   #:lex-ns #:get-lex-ns #:lex-mnemonic #:get-lex-mnemonic
 		   #:lex-value #:get-lex-value #:lex-semantic #:get-lex-semantic
 		   #:lex-encoding #:get-lex-encoding
-		   #:qref #:dref
+		   #:qualified-ref #:dangling-ref #:qref #:dref
 		   #:eager-function #:lazy-function #:impure-eager-function #:impure-lazy-function
-		   #:map-form #:qualify #:eval #:eval-whole))
+		   #:bulk-array #:to-string
+		   #:map-form #:qualify #:eval #:no-env #:eval-whole #:with-eval))
 
 (in-package :bulk/eval)
 
 
+(defclass definition ()
+  ((full-id :initarg :full)
+   (bare-id :initarg :bare)))
+
+(defclass ns-definition (definition)
+   ((env :initarg :env)))
+
 (defclass lexical-environment ()
-  ((table :initform (make-hash-table :test 'equal) :initarg :table)))
+  ((table :initform (make-hash-table :test 'equal) :initarg :table)
+   (bare-ids :initform (make-hash-table :test 'equal) :initarg :bare-ids)
+   (ns-search-functions :initform nil :initarg :search)))
 
 (defgeneric set-value (env field value)
   (:documentation "Set FIELD in ENV with new value VALUE"))
@@ -44,10 +58,14 @@
 (defmethod copy-env ((env lexical-environment))
   (make-instance 'lexical-environment :table (copy-hash-table (slot-value env 'table))))
 
+(defmacro copy/do ((var &optional (env nil env?)) &body body)
+  `(let ((,var (copy-env ,(if env? env var))))
+	 ,@body
+	 ,var))
+
 (defun copy/assign (env field value)
-  (let ((new-env (copy-env env)))
-	(set-value new-env field value)
-	new-env))
+  (copy/do (env)
+	(set-value env field value)))
 
 (defmacro copy/assign! (place field value)
   `(setf ,place (copy/assign ,place ,field ,value)))
@@ -65,6 +83,67 @@
   (maphash (lambda (field value)
 			 (set-value target field value))
 		   (slot-value source 'table)))
+
+
+(defgeneric add-definition (env definition &key num count))
+
+(defmethod add-definition ((env lexical-environment) (definition ns-definition) &key num count)
+  (declare (ignore count))
+  (with-slots (full-id bare-id (defs env)) definition
+	(push definition (gethash bare-id (slot-value env 'bare-ids)))
+	(when num
+	  (apply-env! env defs)
+	  (set-value env (lex-ns num) full-id))))
+
+(defun copy/add-definition (env definition &rest rest)
+  (copy/do (env)
+	(apply #'add-definition env definition rest)))
+
+(defmacro copy/add-definition! (place definition &rest rest)
+  `(setf ,place (copy/add-definition ,place ,definition ,@rest)))
+
+
+(defun has-full-id? (full-id)
+  (lambda (def)
+	(equal full-id (slot-value def 'full-id))))
+
+(defun produces-good-id? (ref-name bare-id)
+  (lambda (def)
+	(and (typep def 'ns-definition)
+		 (with-slots (full-id env) def
+		   (copy/add-definition! env def :num 40)
+		   (equal full-id (eval (list (ref 40 ref-name) bare-id) env))))))
+
+(defun find-among-defs (defs bare-id full-id ref-name all?)
+  (cond
+	(all?
+	 defs)
+	(full-id
+	 (find-if (has-full-id? full-id) defs))
+	(ref-name
+	 (find-if (produces-good-id? ref-name bare-id) defs))
+	(t nil)))
+
+(defgeneric find-definition (env bare-id &key full-id ref-name)
+  (:documentation "Find a namespace among the already known namespaces, by the content of its unique identifier."))
+
+(defmethod find-definition ((env lexical-environment) bare-id &key full-id ref-name all?)
+  (if-let (found (gethash bare-id (slot-value env 'bare-ids)))
+	(find-among-defs found bare-id full-id ref-name all?)))
+
+(defgeneric search-definition (env bare-id &key full-id)
+  (:documentation "Search for a namespace by the content of its unique identifier"))
+
+(defmethod search-definition ((env lexical-environment) bare-id &key full-id ref-name all?)
+  (let@ rec ((functions (slot-value env 'ns-search-functions))
+			 (results))
+	(if-let (search-fn (first functions))
+	  (if-let (found (find-among-defs (funcall search-fn bare-id) bare-id full-id ref-name all?))
+		(if all?
+			(rec (rest functions) (append found results))
+			found)
+		(rec (rest functions) nil))
+	  results)))
 
 
 (defclass compound-lexical-environment ()
@@ -152,6 +231,13 @@
 (defclass impure-lazy-function (lazy-function impure-function) ())
 
 
+(defclass bulk-array (word)
+  ((env :initarg :env)))
+
+(defun to-string (array)
+  (with-slots (bytes env) array
+	(babel:octets-to-string bytes :encoding (get-value env (lex-encoding)))))
+
 
 (defun map-form (function list env)
   (mapcar (lambda (obj) (funcall function obj env)) list))
@@ -159,6 +245,7 @@
 (defun qualify (expr env)
   (typecase expr
 	(qualified-ref expr)
+	(array (make-instance 'bulk-array :bytes expr :env env))
 	(ref (with-slots (ns name) expr
 		   (if-let (ns* (get-lex-ns env ns))
 			 (qref ns* name)
@@ -174,6 +261,7 @@
 					   expr)))
 	(dangling-ref expr)
 	(ref (eval (qualify expr env) env))
+	(array (qualify expr env))
 	(word (unsigned-integer expr))
 	(list (cond
 			((null expr) nil)
@@ -192,10 +280,18 @@
 						   (callable (slot-value function 'function)))
 					   (if (typep function 'impure-function)
 						   (apply callable env args)
-						   (apply callable args)))
+						   (values ; discard possible second value from pure lazy functions
+							(if (typep function 'lazy-function)
+								(apply callable env args) ; lazy function need to eval/qualify
+								(apply callable args)))))
 					 (map-form #'eval expr env)))))
 			(t (map-form #'eval expr env))))
 	(t expr)))
+
+(defun no-env (function)
+  (lambda (env &rest rest)
+	(declare (ignore env))
+	(apply function rest)))
 
 (defun eval-whole (sequence env)
   (let@ rec ((sequence sequence)
@@ -204,4 +300,11 @@
 	(if sequence
 		(bind (((:values expr new-env) (eval (first sequence) env)))
 		  (rec (rest sequence) (if new-env new-env env) (if expr (cons expr yield) yield)))
-		(reverse yield))))
+		(values (reverse yield) env))))
+
+(defmacro with-eval (env bindings &body body)
+  `(let (,@(mapcar (lambda (name) `(,name (eval ,name ,env)))
+				   (rest (assoc 'eval bindings)))
+		 ,@(mapcar (lambda (name) `(,name (to-string ,name)))
+				   (rest (assoc 'string bindings))))
+	 ,@body))
