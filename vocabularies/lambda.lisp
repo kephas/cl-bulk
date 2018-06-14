@@ -15,19 +15,23 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/vocabularies/lambda
-  (:use :cl :bulk/write :bulk/reference :bulk/write/verifiable))
+  (:use :cl :bulk/write :bulk/reference :bulk/write/verifiable :bulk/words :bulk/eval/helpers))
 
 (in-package :bulk/vocabularies/lambda)
+
+(defun lambda-ns (&optional (stream (make-broadcast-stream)))
+  (write-verifiable-ns (stream (:shake128 :output-length 8) #x29 (ref #x28 #x21) "λ"
+							   "This vocabulary can be used to represent functions that can be evaluated."
+							   :counter counter)
+	(write-bulk -> `(,(ref #x20 #xA) ,(ref #x29 counter) "lambda" "( lambda {var}:Ref {body} ) ; type LazyFunction"))
+	(write-bulk -> `(,(ref #x20 #x9) ,(ref #x29 #xFF) "This reference is intended to be used as lambda function variable."))
+	(map nil (lambda (char)
+			   (write-bulk -> (list (ref #x20 #xA) (ref #x29 counter) (string char) (ref #x29 #xFF))))
+		 "abcdefghijklmnopqrstuvwxyz")))
+
 
 (defun main (&optional (path "lambda.bulk"))
   (with-open-file (out path :element-type '(unsigned-byte 8) :direction :output :if-exists :supersede)
 	(write-bulk out (list (ref #x20 #x0) 1 0))
 	(write-bulk out (list (ref #x20 #x6) #x28 (list (ref #x28 #x21) #x97102AB94C55DDF0)))
-	(write-verifiable-ns (out (:shake128 :output-length 8) #x29 (ref #x28 #x21) "λ"
-							  "This vocabulary can be used to represent functions that can be evaluated."
-							  :counter counter)
-	  (write-bulk -> `(,(ref #x20 #xA) ,(ref #x29 counter) "lambda" "( lambda {var}:Ref {body} ) ; type LazyFunction"))
-	  (write-bulk -> `(,(ref #x20 #x9) ,(ref #x29 #xFF) "This reference is intended to be used as lambda function variable."))
-	  (map nil (lambda (char)
-				 (write-bulk -> (list (ref #x20 #xA) (ref #x29 counter) (string char) (ref #x29 #xFF))))
-		   "abcdefghijklmnopqrstuvwxyz"))))
+	(lambda-ns out)))

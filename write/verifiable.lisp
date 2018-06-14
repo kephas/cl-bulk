@@ -31,4 +31,5 @@
 			   (write-bulk -> ,doc)
 			   ,@body)))
 			(hash (word* (ironclad:digest-sequence (ironclad:make-digest ,@hash-params) ,content))))
-	 (write-bulk ,stream (list (ref #x20 #xC) ,num (list ,hash-ref hash) (arbitrary-bytes ,content))))))
+	 (write-bulk ,stream (list (ref #x20 #xC) ,num (list ,hash-ref hash) (arbitrary-bytes ,content)))
+	 hash)))
