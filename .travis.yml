@@ -20,6 +20,7 @@ env:
 
 install:
   - curl -L https://github.com/luismbo/cl-travis/raw/master/install.sh | sh
+  - git clone https://github.com/kephas/cl-scheme.git ~/lisp/cl-sheme
 
 script:
   - cl -e '(ql:quickload "bulk/test")
