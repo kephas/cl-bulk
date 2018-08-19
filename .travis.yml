@@ -16,7 +16,8 @@ install:
 
 script:
   - cl -e '(ql:quickload "bulk/test")
-           (unless (bulk/test:all)
+           (unless (let ((results (hu.dwim.stefil:extract-test-run-statistics (bulk/test:all))))
+                     (eql (getf results :number-of-failures) (getf results :number-of-expected-failures)))
              (uiop:quit 1))'
 
 sudo: required
