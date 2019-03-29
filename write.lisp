@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/write
-  (:use :cl :bulk/reference :bulk/words :scheme :trivial-utf-8 :ieee-floats)
+  (:use :cl :bulk/reference :bulk/words :bulk/spec :scheme :trivial-utf-8 :ieee-floats)
   (:export #:write-bulk #:write-whole
 		   #:arbitrary-bytes
 		   #:create-bulk-file #:append-to-bulk-file
@@ -90,18 +90,18 @@
     ((integer #x-FFFFFFFFFFFFFFFF 0) (%write-word stream (word->bytes (- bulk) :length 8) t))
     ((integer #x-FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 0) (%write-word stream (word->bytes (- bulk) :length 16) t))
     (t (write-bulk stream
-				   (list (ref #x20 #x21) (coerce (word->bytes bulk :twoc t) '(vector (unsigned-byte 8))))))))
+				   (list (ref +bulk/+ +bulk/bigint+) (coerce (word->bytes bulk :twoc t) '(vector (unsigned-byte 8))))))))
 
 (defmethod write-bulk (stream (bulk ratio))
-  (write-bulk stream (list (ref #x20 #x20) (numerator bulk) (denominator bulk))))
+  (write-bulk stream (list (ref +bulk/+ +bulk/frac+) (numerator bulk) (denominator bulk))))
 
 (defmethod write-bulk (stream (bulk float))
   (cond
 	((<= (float-precision bulk) 24)
-	 (write-bulk stream (list (ref #x20 #x22)
+	 (write-bulk stream (list (ref +bulk/+ +bulk/binary+)
 							  (make-instance 'word :bytes (word->bytes (encode-float32 bulk) :length 4)))))
 	((<= (float-precision bulk) 53)
-	 (write-bulk stream (list (ref #x20 #x22)
+	 (write-bulk stream (list (ref +bulk/+ +bulk/binary+)
 							  (make-instance 'word :bytes (word->bytes (encode-float64 bulk) :length 8)))))
 	(t (error 'unimplemented-serialization))))
 
