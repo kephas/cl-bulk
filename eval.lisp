@@ -41,10 +41,13 @@
 (defclass ns-definition (definition)
    ((env :initarg :env)))
 
+(defclass pkg-definition (definition)
+  ((namespaces :initarg :nss)))
+
 (defclass lexical-environment ()
   ((table :initform (make-hash-table :test 'equal) :initarg :table)
    (bare-ids :initform (make-hash-table :test 'equal) :initarg :bare-ids)
-   (ns-search-functions :initform nil :initarg :search)))
+   (def-search-functions :initform nil :initarg :search)))
 
 (defgeneric set-value (env field value)
   (:documentation "Set FIELD in ENV with new value VALUE"))
@@ -95,6 +98,17 @@
 	  (apply-env! env defs)
 	  (set-value env (lex-ns num) full-id))))
 
+(defmethod add-definition ((env lexical-environment) (definition pkg-definition) &key num count)
+  (with-slots (full-id bare-id namespaces) definition
+	(push definition (gethash bare-id (slot-value env 'bare-ids)))
+	(when num
+	  (let@ rec ((num num)
+				 (count count)
+				 (nss namespaces))
+		(unless (zerop count)
+		  (add-definition env (first nss) :num num)
+		  (rec (1+ num) (1- count) (rest nss)))))))
+
 (defun copy/add-definition (env definition &rest rest)
   (copy/do (env)
 	(apply #'add-definition env definition rest)))
@@ -135,7 +149,7 @@
   (:documentation "Search for a namespace by the content of its unique identifier"))
 
 (defmethod search-definition ((env lexical-environment) bare-id &key full-id ref-name all?)
-  (let@ rec ((functions (slot-value env 'ns-search-functions))
+  (let@ rec ((functions (slot-value env 'def-search-functions))
 			 (results))
 	(if-let (search-fn (first functions))
 	  (if-let (found (find-among-defs (funcall search-fn bare-id) bare-id full-id ref-name all?))
