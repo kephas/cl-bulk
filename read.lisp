@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. |#
 
 (uiop:define-package :bulk/read
-  (:use :cl :bulk/reference :bulk/words :scheme :alexandria)
+  (:use :cl :bulk/reference :bulk/words :scheme :alexandria :flexi-streams)
   (:export #:read-bulk #:read-whole #:read-file
 		   #:parsing-error)
   (:reexport :bulk/reference))
@@ -88,7 +88,7 @@ integer"
 
 (define-condition unknown-bulk-version (error) ())
 
-(defun read-whole (stream &key version)
+(defun %read-whole-stream (stream &key version)
   "Parse a whole BULK stream as a sequence of BULK expressions"
   (if version
 	  (if (equal '(1 0) version)
@@ -104,6 +104,16 @@ integer"
 				  (cons first-form (%read-form-payload stream t))
 				  (error 'unsupported-bulk-version :version version)))
 			(error 'unknown-bulk-version)))))
+
+(defgeneric read-whole (source &key version))
+
+(defmethod read-whole ((source stream) &key version)
+  (%read-whole-stream source :version version))
+
+(defmethod read-whole ((source vector) &key version)
+  (with-input-from-sequence (in source)
+    (%read-whole-stream in :version version)))
+
 
 (defun read-file (pathspec &key version)
   "Parse a whole BULK file"
