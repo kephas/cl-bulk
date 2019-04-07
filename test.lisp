@@ -60,6 +60,9 @@
 			  (t obj)))
 		  yield))
 
+(defun same? (expr1 expr2)
+  (string-equal (format nil "~a" expr1) (format nil "~a" expr2)))
+
 
 #| custom equality predicate |#
 
@@ -242,6 +245,10 @@
   (is (eq :us-ascii
 		  (bind (((:values _ env) (eval (list (ref 32 3) (list (ref 32 5) 20127)) *core-1.0*)))
 			(get-lex-encoding env)))))
+
+(deftest definitions ()
+  (is (same? `((42 42) ,(qref '(:std :core) 255))
+			 (eval-whole `(((,(ref 32 9) ,(ref 32 255) 42) ,(ref 32 255)) ,(ref 32 255)) *core-1.0*))))
 
 (defparameter *pies* '(3.141592653589793d0 3.1415927f0))
 (defparameter *pies-bulk* #(1 32 34 7 64 9 33 251 84 68 45 24 2 1 32 34 6 64 73 15 219 2))

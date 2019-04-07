@@ -284,9 +284,12 @@
 							(if (typep function 'lazy-function)
 								(apply callable env args) ; lazy function need to eval/qualify
 								(apply callable args)))))
-					 (map-form #'eval expr env)))))
-			(t (map-form #'eval expr env))))
+					 (eval-list expr env)))))
+			(t (eval-list expr env))))
 	(t expr)))
+
+(defun eval-list (list env)
+  (values (eval-whole list env) env))
 
 (defun no-env (function)
   (lambda (env &rest rest)
