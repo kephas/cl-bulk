@@ -47,6 +47,13 @@
 		   (copy/add-self-describing env num ref-name bare-id)))
 	  ((list (dangling-ref))))))
 
+(defun parse-import (env base count id-form)
+  (with-eval env ((eval base count))
+ 	  (match id-form
+		((list (qualified-ref) _)
+		 (copy/add-by-full-id env base count (eval id-form env)))
+		((list (dangling-ref (ns num) (name ref-name)) bare-id) (error "unimplemented"))
+		((list (dangling-ref))))))
 
 (defun define (env ref value)
   (with-eval env ((eval value))
@@ -87,7 +94,7 @@
 						(name +bulk/codepage+ :mnemonic "codepage" :semantic (fun->eager #'windows-code-page->babel-name))
 						(name +bulk/ns+ :mnemonic "ns" :semantic (fun->lazy* #'parse-ns))
 						(name +bulk/package+ :mnemonic "package")
-						(name +bulk/import+ :mnemonic "import")
+						(name +bulk/import+ :mnemonic "import" :semantic (fun->lazy* #'parse-import))
 						(name +bulk/define+ :mnemonic "define" :semantic (fun->lazy* #'define))
 						(name +bulk/mnemonic/def+ :mnemonic "mnemonic/def"  :semantic (fun->lazy* #'mnemonic/def))
 						(name +bulk/ns-mnemonic+ :mnemonic "ns-mnemonic")
