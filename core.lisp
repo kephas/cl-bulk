@@ -42,7 +42,9 @@
 	(match id-form
 	  ((list (qualified-ref) _)
 	   (copy/add-by-full-id env num nil (eval id-form env)))
-	  ((list (dangling-ref (ns num) (name ref-name)) bare-id) (copy/add-self-describing env num ref-name bare-id))
+	  ((list (dangling-ref (ns num2) (name ref-name)) bare-id)
+	   (if (eql num num2)
+		   (copy/add-self-describing env num ref-name bare-id)))
 	  ((list (dangling-ref))))))
 
 
