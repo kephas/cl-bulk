@@ -186,8 +186,7 @@
 				   :policy policy)))
 
 (defmethod apply-env! (target (source compound-lexical-environment))
-  (with-slots (normal-env lasting-env) source
-	(apply-env! target normal-env)
+  (with-slots (lasting-env) source
 	(apply-env! target lasting-env)))
 
 (defun policy/ns (ns)
