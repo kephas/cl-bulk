@@ -216,15 +216,21 @@
 (deftest namespaces ()
   (let* ((env (copy/add-definition *core-1.0*
 								   (make-ns '(:foo "bar")
-									 (name 0 :value "quux"))
+									 (name 0 :value "quux")
+									 (name 1 :semantic ({eager} (x) (list :foo x))))
 								   :num 40)))
+
+	;; test a NS already associated to a number
 	(is (equal "quux" (eval (ref 40 0) env)))
-	(copy/assign! env (lex-semantic '(:foo "bar") 1) ({eager} (x) (list :foo x)))
+
+	;; test a NS identified with a form already known
 	(copy/add-definition! env (make-ns '(:foo (1 2))
 								(name 0 :value (fun->eager #'+))))
 	(is (equal '(3) (eval-whole (list (list (ref 32 6) 41 (list (ref 40 1) (list 1 2)))
 									  (list (ref 41 0) 1 2))
 								env)))
+
+	;; test a self-identifying NS
 	(copy/add-definition! env (make-ns '(:baz (4 2))
 								(name 0 :value (fun->eager #'*))
 								(name 1 :value ({eager} (x) (list :baz x)))))
