@@ -59,7 +59,10 @@
 (defgeneric copy-env (env))
 
 (defmethod copy-env ((env lexical-environment))
-  (make-instance 'lexical-environment :table (copy-hash-table (slot-value env 'table))))
+  (make-instance 'lexical-environment
+				 :table (copy-hash-table (slot-value env 'table))
+				 :bare-ids (copy-hash-table (slot-value env 'bare-ids))
+				 :search (slot-value env 'def-search-functions)))
 
 (defmacro copy/do ((var &optional (env nil env?)) &body body)
   `(let ((,var (copy-env ,(if env? env var))))
