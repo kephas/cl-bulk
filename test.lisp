@@ -187,19 +187,6 @@
 	(is (= 1 (get-value env-bar (lex-value '(:foo :bar) 1))))
 	(is (= 20 (get-value env-bar (lex-value '(:foo :quux) 0))))))
 
-(deftest eval-one ()
-  (let ((env *core-1.0*))
-	(copy/assign! env (lex-ns 99) '(:foo :bar))
-	(copy/assign! env (lex-value '(:foo :bar) 3) "quux")
-	(copy/assign! env (lex-semantic '(:foo :bar) 4) (fun->eager #'+))
-	(copy/assign! env (lex-semantic '(:foo :bar) 5) (fun->eager #'append))
-	(copy/assign! env (lex-semantic '(:foo :bar) 6) (fun->lazy #'append))
-	(is (egal? (dref 42 0) (eval (ref 42 0) env)))
-	(is (egal? (qref '(:std :core) 2) (eval (ref 32 2) env)))
-	(is (egal? "quux" (eval (ref 99 3) env)))
-	(is (egal? 6 (eval (list (ref 99 4) 1 2 3) env)))
-	(is (egal? (eval (list (ref 99 5) (list (list (ref 99 4) 1 2)) (list 3)) env) (list 3 3)))
-	(is (egal? (eval (list (ref 99 6) (list (list (ref 99 4) 1 2)) (list 3)) env) (list (list (qref '(:foo :bar) 4) 1 2) 3)))))
 
 (deftest eval-many ()
   (let ((env *core-1.0*))
@@ -218,10 +205,13 @@
 	(copy/add-definition! env (make-ns '(:foo 1)
   								(name 0 :value "quux")
 								(name 1 :value 42)
-  								(name 2 :semantic ({eager} (x) (list :foo x))))
+  								(name 2 :semantic ({eager} (x) (list :foo x)))
+								(name 3 :semantic (fun->eager #'+))
+								(name 4 :semantic (fun->eager #'append))
+								(name 5 :semantic (fun->lazy #'append)))
   						  :num 40)
 	(copy/add-definition! env (make-ns '(:foo 2)
-								(name 0 :value (fun->eager #'+))))
+								(name 0 :value (fun->eager #'-))))
 	(copy/add-definition! env (make-ns '(:baz 1)
 								(name 0 :value (fun->eager #'*))
 								(name 1 :value ({eager} (x) (list :baz x)))))
@@ -231,10 +221,14 @@
   (let ((env *core+foo/baz*))
 	;; test a NS already associated to a number
 	(is (equal "quux" (eval (ref 40 0) env)))
+	(labels ((appender (op)
+			   (list (ref 40 op) (list (list (ref 40 3) 1 2)) (list 3))))
+	  (is (egal? (eval (appender 4) env) (list 3 3)))
+	  (is (egal? (eval (appender 5) env) (list (list (qref '(:foo 1) 3) 1 2) 3))))
 
 	;; test a NS identified with a form already known
 	(is (equal '(3) (eval-whole (list (list (ref 32 6) 41 (list (ref 40 2) 2))
-									  (list (ref 41 0) 1 2))
+									  (list (ref 41 0) 4 1))
 								env)))
 
 	;; test a self-identifying NS
