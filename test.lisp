@@ -213,28 +213,32 @@
 											 (,(ref 255 0) ,(ref 255 10) ,(ref 255 20))
 											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
 
-(deftest namespaces ()
-  (let* ((env (copy/add-definition *core-1.0*
-								   (make-ns '(:foo "bar")
-									 (name 0 :value "quux")
-									 (name 1 :semantic ({eager} (x) (list :foo x))))
-								   :num 40)))
+(defparameter *core+foo/baz*
+  (let ((env *core-1.0*))
+	(copy/add-definition! env (make-ns '(:foo 1)
+  								(name 0 :value "quux")
+								(name 1 :value 42)
+  								(name 2 :semantic ({eager} (x) (list :foo x))))
+  						  :num 40)
+	(copy/add-definition! env (make-ns '(:foo 2)
+								(name 0 :value (fun->eager #'+))))
+	(copy/add-definition! env (make-ns '(:baz 1)
+								(name 0 :value (fun->eager #'*))
+								(name 1 :value ({eager} (x) (list :baz x)))))
+	env))
 
+(deftest namespaces ()
+  (let ((env *core+foo/baz*))
 	;; test a NS already associated to a number
 	(is (equal "quux" (eval (ref 40 0) env)))
 
 	;; test a NS identified with a form already known
-	(copy/add-definition! env (make-ns '(:foo (1 2))
-								(name 0 :value (fun->eager #'+))))
-	(is (equal '(3) (eval-whole (list (list (ref 32 6) 41 (list (ref 40 1) (list 1 2)))
+	(is (equal '(3) (eval-whole (list (list (ref 32 6) 41 (list (ref 40 2) 2))
 									  (list (ref 41 0) 1 2))
 								env)))
 
 	;; test a self-identifying NS
-	(copy/add-definition! env (make-ns '(:baz (4 2))
-								(name 0 :value (fun->eager #'*))
-								(name 1 :value ({eager} (x) (list :baz x)))))
-	(is (equal '(8) (eval-whole (list (list (ref 32 6) 42 (list (ref 42 1) (list 4 2)))
+	(is (equal '(8) (eval-whole (list (list (ref 32 6) 42 (list (ref 42 1) 1))
 									  (list (ref 42 0) 2 4))
 								env)))))
 
