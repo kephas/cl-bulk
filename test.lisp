@@ -236,6 +236,21 @@
 									  (list (ref 42 0) 2 4))
 								env)))))
 
+(defparameter *core+foo/baz+pkg*
+  (let ((env *core+foo/baz*))
+	(copy/add-definition! env (make-pkg '(:quux 0)
+										(make-ns '(:quux 1)
+										  (name 0 :value 101))
+										(make-ns '(:quux 2)
+										  (name 0 :semantic ({eager} (x) (list :quux x))))
+										(make-ns '(:quux 3)
+										  (name 0 :value '(1)))))
+	env))
+
+(deftest import-pkg ()
+  (let ((env *core+foo/baz+pkg*))
+	(is (equal '(101) (eval-whole (list (list (ref 32 8) 41 2 (list (ref 42 0) 0)) (ref 41 0)) env)))))
+
 (defsuite* core)
 
 (deftest stringenc ()

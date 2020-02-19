@@ -104,13 +104,19 @@
 (defmethod add-definition ((env lexical-environment) (definition pkg-definition) &key num count)
   (with-slots (full-id bare-id namespaces) definition
 	(push definition (gethash bare-id (slot-value env 'bare-ids)))
-	(when num
-	  (let@ rec ((num num)
-				 (count count)
-				 (nss namespaces))
-		(unless (zerop count)
-		  (add-definition env (first nss) :num num)
-		  (rec (1+ num) (1- count) (rest nss)))))))
+	(let ((count (if num count (length (slot-value definition 'namespaces)))))
+	  (when count
+		(let@ rec ((num num)
+				   (count count)
+				   (nss namespaces))
+		  (unless (zerop count)
+			(if num
+				(progn
+				  (add-definition env (first nss) :num num)
+				  (rec (1+ num) (1- count) (rest nss)))
+				(progn
+				  (add-definition env (first nss))
+				  (rec num (1- count) (rest nss))))))))))
 
 (defun copy/add-definition (env definition &rest rest)
   (copy/do (env)
@@ -124,38 +130,37 @@
   (lambda (def)
 	(equal full-id (slot-value def 'full-id))))
 
-(defun produces-good-id? (ref-name bare-id)
+(defun produces-good-id? (env ns-num count id-form)
   (lambda (def)
-	(and (typep def 'ns-definition)
-		 (with-slots (full-id env) def
-		   (copy/add-definition! env def :num 40)
-		   (equal full-id (eval (list (ref 40 ref-name) bare-id) env))))))
+	(with-slots (full-id) def
+	  (copy/add-definition! env def :num ns-num :count count)
+	  (equal full-id (eval id-form env)))))
 
-(defun find-among-defs (defs bare-id full-id ref-name all?)
+(defun find-among-defs (env defs full-id ns-num id-form all? count)
   (cond
 	(all?
 	 defs)
 	(full-id
 	 (find-if (has-full-id? full-id) defs))
-	(ref-name
-	 (find-if (produces-good-id? ref-name bare-id) defs))
+	(id-form
+	 (find-if (produces-good-id? env ns-num count id-form) defs))
 	(t nil)))
 
-(defgeneric find-definition (env bare-id &key full-id ref-name)
+(defgeneric find-definition (env bare-id &key full-id ns-num id-form all? count)
   (:documentation "Find a namespace among the already known namespaces, by the content of its unique identifier."))
 
-(defmethod find-definition ((env lexical-environment) bare-id &key full-id ref-name all?)
+(defmethod find-definition ((env lexical-environment) bare-id &key full-id ns-num id-form all? count)
   (if-let (found (gethash bare-id (slot-value env 'bare-ids)))
-	(find-among-defs found bare-id full-id ref-name all?)))
+	(find-among-defs env found full-id ns-num id-form all? count)))
 
-(defgeneric search-definition (env bare-id &key full-id)
+(defgeneric search-definition (env bare-id &key full-id ns-num id-form all? count)
   (:documentation "Search for a namespace by the content of its unique identifier"))
 
-(defmethod search-definition ((env lexical-environment) bare-id &key full-id ref-name all?)
+(defmethod search-definition ((env lexical-environment) bare-id &key full-id ns-num id-form all? count)
   (let@ rec ((functions (slot-value env 'def-search-functions))
 			 (results))
 	(if-let (search-fn (first functions))
-	  (if-let (found (find-among-defs (funcall search-fn bare-id) bare-id full-id ref-name all?))
+	  (if-let (found (find-among-defs env (funcall search-fn bare-id) full-id ns-num id-form all? count))
 		(if all?
 			(rec (rest functions) (append found results))
 			found)

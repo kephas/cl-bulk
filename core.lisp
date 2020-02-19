@@ -32,28 +32,31 @@
 					  (search-definition env bare-id :full-id full-id)))
 	   (values nil (copy/add-definition env def :num num :count count))))))
 
-(defun copy/add-self-describing (env num ref-name bare-id)
-  (if-let (def (or (find-definition env bare-id :ref-name ref-name)
-				   (search-definition env bare-id :ref-name ref-name)))
-	(values nil (copy/add-definition env def :num num))))
+(defun copy/add-self-describing (env num bare-id id-form &key count)
+  (if-let (def (or (find-definition env bare-id :ns-num num :id-form id-form :count count)
+				   (search-definition env bare-id :ns-num num :id-form id-form :count count)))
+	(progn
+	  (values nil (copy/add-definition env def :num num :count count)))))
 
 (defun parse-ns (env num id-form)
   (with-eval env ((eval num))
 	(match id-form
 	  ((list (qualified-ref) _)
 	   (copy/add-by-full-id env num nil (eval id-form env)))
-	  ((list (dangling-ref (ns num2) (name ref-name)) bare-id)
+	  ((list (dangling-ref (ns num2) (name _)) bare-id)
 	   (if (eql num num2)
-		   (copy/add-self-describing env num ref-name bare-id)))
+		   (copy/add-self-describing env num bare-id id-form)))
 	  ((list (dangling-ref))))))
 
 (defun parse-import (env base count id-form)
   (with-eval env ((eval base count))
- 	  (match id-form
-		((list (qualified-ref) _)
-		 (copy/add-by-full-id env base count (eval id-form env)))
-		((list (dangling-ref (ns num) (name ref-name)) bare-id) (error "unimplemented"))
-		((list (dangling-ref))))))
+ 	(match id-form
+	  ((list (qualified-ref) _)
+	   (copy/add-by-full-id env base count (eval id-form env)))
+	  ((list (dangling-ref (ns num) (name _)) bare-id)
+	   (when (<= base num (+ base count))
+		 (copy/add-self-describing env base bare-id id-form :count count)))
+	  ((list (dangling-ref))))))
 
 (defun define (env ref value)
   (with-eval env ((eval value))

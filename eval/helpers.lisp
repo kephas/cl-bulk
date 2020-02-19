@@ -19,7 +19,7 @@
   (:shadowing-import-from #:bulk/eval #:eval)
   (:export #:no-env #:fun->eager #:fun->eager* #:fun->lazy #:fun->lazy*
 		   #:{eager} #:{eager*} #:{lazy} #:{lazy*}
-		   #:set-ns! #:make-ns #:name))
+		   #:set-ns! #:make-ns #:name #:make-pkg))
 
 (in-package :bulk/eval/helpers)
 
@@ -67,3 +67,6 @@
 	`(let ((,ns (make-instance 'ns-definition  :full ,full-id :bare (second ,full-id) :env (make-instance 'lexical-environment))))
 	   (set-ns! ,ns ,@body)
 	   ,ns)))
+
+(defun make-pkg (full-id &rest namespaces)
+  (make-instance 'pkg-definition :full full-id :bare (second full-id) :nss namespaces))
