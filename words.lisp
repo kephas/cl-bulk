@@ -16,7 +16,7 @@
 
 (uiop:define-package :bulk/words
   (:use :cl :scheme)
-  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes #:word* #:word #:get-bytes
+  (:export #:parse-2c-notation #:make-2c-notation #:bytes->word #:word->bytes #:word* #:word #:bytes #:get-bytes
 		   #:unsigned-integer #:signed-integer))
 
 (in-package :bulk/words)
