@@ -247,6 +247,7 @@
 	(is (equal '(101) (eval-whole (list (list (ref 32 8) 41 2 (list (ref 42 0) 0))
 										(ref 41 0))
 								  env)))))
+;; TODO: test that badly self-identified NS fails
 
 (deftest stringenc ()
   (is (eq :iso-8859-15
