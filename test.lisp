@@ -188,17 +188,7 @@
 	(is (= 20 (get-value env-bar (lex-value '(:foo :quux) 0))))))
 
 
-(deftest eval-many ()
-  (let ((env *core-1.0*))
-	(copy/assign! env (lex-ns 255) '(:foo :bar))
-	(copy/assign! env (lex-semantic '(:foo :bar) 0) (fun->eager #'+))
-	(is (egal? '(1 2 3 4 10) (eval-whole `((,(ref 32 9) ,(ref 255 10) 1)
-										   (,(ref 32 9) ,(ref 255 20) 2)
-										   (,(ref 32 9) ,(ref 255 30) 3)
-										   (,(ref 32 9) ,(ref 255 40) 4)
-										   (,(ref 255 0)
-											 (,(ref 255 0) ,(ref 255 10) ,(ref 255 20))
-											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
+(defsuite* core)
 
 (defparameter *foo/baz/quux*
   (let ((env *core-1.0*))
@@ -224,6 +214,16 @@
 										  (name 0 :value '(1)))))
 	env))
 
+(deftest defines ()
+  (is (egal? '(1 2 3 4 10) (eval-whole `((,(ref 32 9) ,(ref 40 10) 1)
+										 (,(ref 32 9) ,(ref 40 20) 2)
+										 (,(ref 32 9) ,(ref 40 30) 3)
+										 (,(ref 32 9) ,(ref 40 40) 4)
+										 (,(ref 40 3)
+										   (,(ref 40 3) ,(ref 40 10) ,(ref 40 20))
+										   (,(ref 40 3) ,(ref 40 30) ,(ref 40 40))))
+									   *foo/baz/quux*))))
+
 (deftest namespaces ()
   (let ((env *foo/baz/quux*))
 	;; test a NS already associated to a number
@@ -247,8 +247,6 @@
 	(is (equal '(101) (eval-whole (list (list (ref 32 8) 41 2 (list (ref 42 0) 0))
 										(ref 41 0))
 								  env)))))
-
-(defsuite* core)
 
 (deftest stringenc ()
   (is (eq :iso-8859-15
