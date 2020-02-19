@@ -200,7 +200,7 @@
 											 (,(ref 255 0) ,(ref 255 10) ,(ref 255 20))
 											 (,(ref 255 0) ,(ref 255 30) ,(ref 255 40)))) env)))))
 
-(defparameter *core+foo/baz*
+(defparameter *foo/baz/quux*
   (let ((env *core-1.0*))
 	(copy/add-definition! env (make-ns '(:foo 1)
   								(name 0 :value "quux")
@@ -215,10 +215,17 @@
 	(copy/add-definition! env (make-ns '(:baz 1)
 								(name 0 :value (fun->eager #'*))
 								(name 1 :value ({eager} (x) (list :baz x)))))
+	(copy/add-definition! env (make-pkg '(:quux 0)
+										(make-ns '(:quux 1)
+										  (name 0 :value 101))
+										(make-ns '(:quux 2)
+										  (name 0 :semantic ({eager} (x) (list :quux x))))
+										(make-ns '(:quux 3)
+										  (name 0 :value '(1)))))
 	env))
 
 (deftest namespaces ()
-  (let ((env *core+foo/baz*))
+  (let ((env *foo/baz/quux*))
 	;; test a NS already associated to a number
 	(is (equal "quux" (eval (ref 40 0) env)))
 	(labels ((appender (op)
@@ -234,22 +241,12 @@
 	;; test a self-identifying NS
 	(is (equal '(8) (eval-whole (list (list (ref 32 6) 42 (list (ref 42 1) 1))
 									  (list (ref 42 0) 2 4))
-								env)))))
+								env)))
 
-(defparameter *core+foo/baz+pkg*
-  (let ((env *core+foo/baz*))
-	(copy/add-definition! env (make-pkg '(:quux 0)
-										(make-ns '(:quux 1)
-										  (name 0 :value 101))
-										(make-ns '(:quux 2)
-										  (name 0 :semantic ({eager} (x) (list :quux x))))
-										(make-ns '(:quux 3)
-										  (name 0 :value '(1)))))
-	env))
-
-(deftest import-pkg ()
-  (let ((env *core+foo/baz+pkg*))
-	(is (equal '(101) (eval-whole (list (list (ref 32 8) 41 2 (list (ref 42 0) 0)) (ref 41 0)) env)))))
+	;; test self-identifying PKG
+	(is (equal '(101) (eval-whole (list (list (ref 32 8) 41 2 (list (ref 42 0) 0))
+										(ref 41 0))
+								  env)))))
 
 (defsuite* core)
 
